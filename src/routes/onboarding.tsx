@@ -67,14 +67,28 @@ function OnboardingPage() {
 
         const netWorth = parseCurrencyToCents(values.netWorth ?? "");
         if (netWorth && netWorth > 0) {
-          await upsertAccount.mutateAsync({
-            name: "Patrimônio inicial",
-            type: "INVESTMENT",
-            side: "ASSET",
-            liquid: true,
-            sort_order: 0,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const db = supabase as any;
+          const { data: account, error } = await db
+            .from("accounts")
+            .insert({
+              user_id: auth.user.id,
+              name: "Patrimônio inicial",
+              type: "INVESTMENT",
+              side: "ASSET",
+              liquid: true,
+              sort_order: 0,
+            })
+            .select("id")
+            .single();
+          if (error) throw new Error(error.message);
+          await upsertBalance.mutateAsync({
+            account_id: (account as { id: string }).id,
+            month: currentMonthKey(),
+            balance_cents: netWorth,
           });
         }
+
 
         const income = parseCurrencyToCents(values.income ?? "");
         if (income && income > 0) {
