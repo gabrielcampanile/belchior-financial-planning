@@ -2,10 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, type ReactN
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { refreshExchangeRates } from "@/lib/exchangeRates.functions";
-
-const RATES_SYNC_KEY = "belchior:rates-sync";
-
 import { supabase } from "@/integrations/supabase/client";
+
 import {
   DEFAULT_CURRENCY,
   money,
