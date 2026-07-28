@@ -87,8 +87,11 @@ function OnboardingPage() {
       }
 
       invalidate();
+      // garante que o perfil já esteja atualizado antes de sair do onboarding
+      await queryClient.refetchQueries({ queryKey: ["profile"] });
       toast.success("Tudo pronto.");
       navigate({ to: "/", replace: true });
+
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível concluir.");
     } finally {
