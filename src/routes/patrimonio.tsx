@@ -67,13 +67,27 @@ function PatrimonioPage() {
     currency: DEFAULT_CURRENCY as CurrencyCode,
   });
 
-  function balanceOf(accountId: string) {
+  /** Saldo registrado exatamente neste mês (0 se não houver). */
+  function exactBalanceOf(accountId: string) {
     return balances.find((b) => b.account_id === accountId && b.month === month)?.balance_cents ?? 0;
+  }
+
+  /** Saldo vigente: último saldo conhecido até o mês — é o valor que conta no patrimônio. */
+  function balanceOf(accountId: string) {
+    const known = balances
+      .filter((b) => b.account_id === accountId && b.month <= month)
+      .sort((a, b) => a.month.localeCompare(b.month));
+    return known[known.length - 1]?.balance_cents ?? 0;
+  }
+
+  function isCarried(accountId: string) {
+    return !balances.some((b) => b.account_id === accountId && b.month === month) && balanceOf(accountId) !== 0;
   }
 
   function currencyOf(accountId: string): CurrencyCode {
     return toCurrencyCode(accounts.find((a) => a.id === accountId)?.currency);
   }
+
 
   async function createAccount() {
     if (!form.name.trim()) {
