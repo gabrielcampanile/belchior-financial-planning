@@ -1,6 +1,9 @@
-import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { refreshExchangeRates } from "@/lib/exchangeRates.functions";
 import { supabase } from "@/integrations/supabase/client";
+
 import {
   DEFAULT_CURRENCY,
   money,
@@ -12,6 +15,9 @@ import { convertMoney, createConverter, type ExchangeRate, type MoneyConverter }
 import { fetchExchangeRates } from "@/lib/exchangeRateService";
 import { formatCents } from "@/lib/format";
 import { useProfile } from "@/hooks/useFinanceData";
+
+const RATES_SYNC_KEY = "belchior:rates-sync";
+
 
 interface CurrencyContextValue {
   displayCurrency: CurrencyCode;
@@ -44,6 +50,20 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
   const displayCurrency = toCurrencyCode(profile?.display_currency, DEFAULT_CURRENCY);
+
+  // Atualiza as cotações uma vez por dia, ao entrar na plataforma.
+  const refresh = useServerFn(refreshExchangeRates);
+  useEffect(() => {
+    if (!profile) return;
+    const today = new Date().toISOString().slice(0, 10);
+    if (typeof window === "undefined") return;
+    if (window.localStorage.getItem(RATES_SYNC_KEY) === today) return;
+    window.localStorage.setItem(RATES_SYNC_KEY, today);
+    void refresh()
+      .then(() => queryClient.invalidateQueries({ queryKey: ["exchange-rates"] }))
+      .catch(() => window.localStorage.removeItem(RATES_SYNC_KEY));
+  }, [profile, refresh, queryClient]);
+
 
   const mutation = useMutation({
     mutationFn: async (currency: CurrencyCode) => {
