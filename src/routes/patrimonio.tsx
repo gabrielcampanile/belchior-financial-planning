@@ -255,3 +255,33 @@ function PatrimonioPage() {
     </AppLayout>
   );
 }
+
+function BalanceInput({
+  initial,
+  pending,
+  onSave,
+}: {
+  initial: string;
+  pending: boolean;
+  onSave: (value: string) => void | Promise<void>;
+}) {
+  const [value, setValue] = useState(initial);
+  const dirty = value !== initial;
+
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        className="h-9 w-36 text-right tabular-nums"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => dirty && void onSave(value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void onSave(value);
+        }}
+      />
+      <Button size="sm" variant={dirty ? "default" : "outline"} disabled={!dirty || pending} onClick={() => void onSave(value)}>
+        Salvar
+      </Button>
+    </div>
+  );
+}
