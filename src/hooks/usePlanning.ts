@@ -129,7 +129,7 @@ export function useDuplicateScenario() {
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
       const { data, error } = await db.rpc("duplicate_scenario", {
         _scenario_id: id,
-        _new_name: name,
+        _name: name,
       });
       if (error) throw new Error(error.message);
       return data as string;
