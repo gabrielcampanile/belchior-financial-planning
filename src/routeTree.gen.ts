@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TransacoesRouteImport } from './routes/transacoes'
 import { Route as PatrimonioRouteImport } from './routes/patrimonio'
+import { Route as ImportarRouteImport } from './routes/importar'
 import { Route as FechamentosRouteImport } from './routes/fechamentos'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
@@ -23,6 +24,11 @@ const TransacoesRoute = TransacoesRouteImport.update({
 const PatrimonioRoute = PatrimonioRouteImport.update({
   id: '/patrimonio',
   path: '/patrimonio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImportarRoute = ImportarRouteImport.update({
+  id: '/importar',
+  path: '/importar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FechamentosRoute = FechamentosRouteImport.update({
@@ -45,6 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/fechamentos': typeof FechamentosRoute
+  '/importar': typeof ImportarRoute
   '/patrimonio': typeof PatrimonioRoute
   '/transacoes': typeof TransacoesRoute
 }
@@ -52,6 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/fechamentos': typeof FechamentosRoute
+  '/importar': typeof ImportarRoute
   '/patrimonio': typeof PatrimonioRoute
   '/transacoes': typeof TransacoesRoute
 }
@@ -60,19 +68,33 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/fechamentos': typeof FechamentosRoute
+  '/importar': typeof ImportarRoute
   '/patrimonio': typeof PatrimonioRoute
   '/transacoes': typeof TransacoesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/fechamentos' | '/patrimonio' | '/transacoes'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/fechamentos'
+    | '/importar'
+    | '/patrimonio'
+    | '/transacoes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/fechamentos' | '/patrimonio' | '/transacoes'
+  to:
+    | '/'
+    | '/auth'
+    | '/fechamentos'
+    | '/importar'
+    | '/patrimonio'
+    | '/transacoes'
   id:
     | '__root__'
     | '/'
     | '/auth'
     | '/fechamentos'
+    | '/importar'
     | '/patrimonio'
     | '/transacoes'
   fileRoutesById: FileRoutesById
@@ -81,6 +103,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   FechamentosRoute: typeof FechamentosRoute
+  ImportarRoute: typeof ImportarRoute
   PatrimonioRoute: typeof PatrimonioRoute
   TransacoesRoute: typeof TransacoesRoute
 }
@@ -99,6 +122,13 @@ declare module '@tanstack/react-router' {
       path: '/patrimonio'
       fullPath: '/patrimonio'
       preLoaderRoute: typeof PatrimonioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/importar': {
+      id: '/importar'
+      path: '/importar'
+      fullPath: '/importar'
+      preLoaderRoute: typeof ImportarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/fechamentos': {
@@ -129,6 +159,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   FechamentosRoute: FechamentosRoute,
+  ImportarRoute: ImportarRoute,
   PatrimonioRoute: PatrimonioRoute,
   TransacoesRoute: TransacoesRoute,
 }
