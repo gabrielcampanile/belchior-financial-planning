@@ -92,7 +92,7 @@ export function occursInMonth(plan: PlanBase, month: MonthKey): boolean {
 
   const monthsOfYear = plan.months_of_year ?? [];
   if (monthsOfYear.length > 0) {
-    return monthsOfYear.includes(parseISO(month).getUTCMonth() + 1);
+    return monthsOfYear.includes(parseISO(month).getMonth() + 1);
   }
 
   const step = FREQUENCY_STEP[plan.frequency] || 1;
