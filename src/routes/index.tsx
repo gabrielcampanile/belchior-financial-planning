@@ -57,6 +57,7 @@ function DashboardPage() {
   const month = currentMonthKey();
   const { data: profile } = useProfile();
   const { data: settings } = useSettings();
+  const { convert, displayCurrency } = useCurrency();
   const { data: accounts = [] } = useAccounts();
   const { data: balances = [] } = useBalances();
   const { data: categories = [] } = useCategories();
@@ -68,11 +69,11 @@ function DashboardPage() {
 
   const metrics = useMemo(
     () => monthMetrics(month, transactions, incomes, categories, convert),
-    [month, transactions, incomes, categories],
+    [month, transactions, incomes, categories, convert],
   );
   const series = useMemo(
     () => netWorthSeries(lastMonths(month, 12), accounts, balances, convert),
-    [month, accounts, balances],
+    [month, accounts, balances, convert],
   );
   const now = netWorthForMonth(month, accounts, balances, convert);
   const previous = netWorthForMonth(shiftMonth(month, -1), accounts, balances, convert);
@@ -88,6 +89,7 @@ function DashboardPage() {
     hasData,
     reserveMonths: months,
     emergencyMonthsTarget: targetMonths,
+    currency: displayCurrency,
   });
 
   const chartData = series.map((s) => ({ month: monthLabelShort(s.month), value: s.netWorth / 100 }));
@@ -157,7 +159,7 @@ function DashboardPage() {
         <MetricValue
           label="Reserva financeira"
           value={`${months.toFixed(1)} meses`}
-          hint={`Líquido ${formatCents(now.liquid, displayCurrency)} · meta ${formatCents(emergencyFundTarget(essentialMonthly, targetMonths, displayCurrency))}`}
+          hint={`Líquido ${formatCents(now.liquid, displayCurrency)} · meta ${formatCents(emergencyFundTarget(essentialMonthly, targetMonths), displayCurrency)}`}
           tone={months >= targetMonths ? "positive" : "neutral"}
           badge="REAL"
         />
