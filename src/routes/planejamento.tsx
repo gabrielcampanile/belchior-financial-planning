@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -69,8 +68,8 @@ import {
   useScenarios,
 } from "@/hooks/usePlanning";
 import { useCurrency } from "@/hooks/useCurrency";
-import { centsToInput, formatCents, formatPercent, formatSignedCents, parseCurrencyToCents } from "@/lib/format";
-import { currentMonthKey, monthEndISO, monthLabel, monthLabelShort, monthStartISO, shiftMonth } from "@/lib/months";
+import { formatCents, formatPercent, formatSignedCents, parseCurrencyToCents } from "@/lib/format";
+import { currentMonthKey, monthEndISO, monthLabel, monthLabelShort, monthStartISO } from "@/lib/months";
 
 export const Route = createFileRoute("/planejamento")({
   validateSearch: (search: Record<string, unknown>) => ({
