@@ -71,15 +71,16 @@ function ClosuresPage() {
   const upsertIncome = useUpsert("income_entries");
   const removeIncome = useDeleteRow("income_entries");
   const upsertClosure = useUpsert("closures", "user_id,month");
+  const { convert, displayCurrency } = useCurrency();
 
   const metrics = useMemo(
     () => monthMetrics(month, transactions, incomes, categories, convert),
-    [month, transactions, incomes, categories],
+    [month, transactions, incomes, categories, convert],
   );
   const netWorth = netWorthForMonth(month, accounts, balances, convert).netWorth;
   const closure = closures.find((c) => c.month === month);
   const uncategorized = transactions.filter((t) => t.type === "EXPENSE" && !t.category_id).length;
-  const highlights = closureHighlights(month, metrics);
+  const highlights = closureHighlights(month, metrics, displayCurrency);
 
   const [form, setForm] = useState({
     name: "",
