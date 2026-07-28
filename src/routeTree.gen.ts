@@ -11,8 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TransacoesRouteImport } from './routes/transacoes'
 import { Route as PatrimonioRouteImport } from './routes/patrimonio'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as ImportarRouteImport } from './routes/importar'
 import { Route as FechamentosRouteImport } from './routes/fechamentos'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -26,6 +28,11 @@ const PatrimonioRoute = PatrimonioRouteImport.update({
   path: '/patrimonio',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ImportarRoute = ImportarRouteImport.update({
   id: '/importar',
   path: '/importar',
@@ -34,6 +41,11 @@ const ImportarRoute = ImportarRouteImport.update({
 const FechamentosRoute = FechamentosRouteImport.update({
   id: '/fechamentos',
   path: '/fechamentos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -50,16 +62,20 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/fechamentos': typeof FechamentosRoute
   '/importar': typeof ImportarRoute
+  '/onboarding': typeof OnboardingRoute
   '/patrimonio': typeof PatrimonioRoute
   '/transacoes': typeof TransacoesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/fechamentos': typeof FechamentosRoute
   '/importar': typeof ImportarRoute
+  '/onboarding': typeof OnboardingRoute
   '/patrimonio': typeof PatrimonioRoute
   '/transacoes': typeof TransacoesRoute
 }
@@ -67,8 +83,10 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/configuracoes': typeof ConfiguracoesRoute
   '/fechamentos': typeof FechamentosRoute
   '/importar': typeof ImportarRoute
+  '/onboarding': typeof OnboardingRoute
   '/patrimonio': typeof PatrimonioRoute
   '/transacoes': typeof TransacoesRoute
 }
@@ -77,24 +95,30 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/configuracoes'
     | '/fechamentos'
     | '/importar'
+    | '/onboarding'
     | '/patrimonio'
     | '/transacoes'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/configuracoes'
     | '/fechamentos'
     | '/importar'
+    | '/onboarding'
     | '/patrimonio'
     | '/transacoes'
   id:
     | '__root__'
     | '/'
     | '/auth'
+    | '/configuracoes'
     | '/fechamentos'
     | '/importar'
+    | '/onboarding'
     | '/patrimonio'
     | '/transacoes'
   fileRoutesById: FileRoutesById
@@ -102,8 +126,10 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  ConfiguracoesRoute: typeof ConfiguracoesRoute
   FechamentosRoute: typeof FechamentosRoute
   ImportarRoute: typeof ImportarRoute
+  OnboardingRoute: typeof OnboardingRoute
   PatrimonioRoute: typeof PatrimonioRoute
   TransacoesRoute: typeof TransacoesRoute
 }
@@ -124,6 +150,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PatrimonioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/importar': {
       id: '/importar'
       path: '/importar'
@@ -136,6 +169,13 @@ declare module '@tanstack/react-router' {
       path: '/fechamentos'
       fullPath: '/fechamentos'
       preLoaderRoute: typeof FechamentosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -158,8 +198,10 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  ConfiguracoesRoute: ConfiguracoesRoute,
   FechamentosRoute: FechamentosRoute,
   ImportarRoute: ImportarRoute,
+  OnboardingRoute: OnboardingRoute,
   PatrimonioRoute: PatrimonioRoute,
   TransacoesRoute: TransacoesRoute,
 }
