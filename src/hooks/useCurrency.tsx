@@ -16,6 +16,9 @@ import { fetchExchangeRates } from "@/lib/exchangeRateService";
 import { formatCents } from "@/lib/format";
 import { useProfile } from "@/hooks/useFinanceData";
 
+const RATES_SYNC_KEY = "belchior:rates-sync";
+
+
 interface CurrencyContextValue {
   displayCurrency: CurrencyCode;
   setDisplayCurrency: (currency: CurrencyCode) => void;
