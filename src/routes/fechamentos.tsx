@@ -36,7 +36,8 @@ import { buildClosureTotals, monthMetrics, netWorthForMonth } from "@/domain/fin
 import { closureHighlights } from "@/domain/summaryPhrases";
 import { formatCents, formatPercent, parseCurrencyToCents } from "@/lib/format";
 import { useCurrency } from "@/hooks/useCurrency";
-import { toCurrencyCode } from "@/domain/currency";
+import { DEFAULT_CURRENCY, toCurrencyCode, type CurrencyCode } from "@/domain/currency";
+import { CurrencyField } from "@/components/finance/CurrencySelect";
 import { currentMonthKey, monthEndISO, monthLabel, monthStartISO, shiftMonth } from "@/lib/months";
 
 export const Route = createFileRoute("/fechamentos")({
@@ -87,6 +88,7 @@ function ClosuresPage() {
     amount: "",
     type: "SALARY" as IncomeType,
     nature: "RECURRING" as IncomeNature,
+    currency: DEFAULT_CURRENCY as CurrencyCode,
   });
 
   async function addIncome() {
@@ -101,6 +103,7 @@ function ClosuresPage() {
       type: form.type,
       nature: form.nature,
       amount_cents: Math.abs(cents),
+      currency: form.currency,
     });
     toast.success("Receita registrada.");
     setOpen(false);
@@ -191,6 +194,13 @@ function ClosuresPage() {
                       value={form.amount}
                       placeholder="8.500,00"
                       onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Moeda</Label>
+                    <CurrencyField
+                      value={form.currency}
+                      onChange={(currency) => setForm({ ...form, currency })}
                     />
                   </div>
                   <div className="grid gap-2">
