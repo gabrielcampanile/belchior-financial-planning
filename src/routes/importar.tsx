@@ -20,6 +20,7 @@ import {
 import { applyRules } from "@/domain/categorizationEngine";
 import { useCategories, useRules, useTransactions, useUpsert } from "@/hooks/useFinanceData";
 import { formatCents } from "@/lib/format";
+import { CURRENCY_LIST, DEFAULT_CURRENCY, type CurrencyCode } from "@/domain/currency";
 import { formatDateBR } from "@/lib/months";
 
 export const Route = createFileRoute("/importar")({
@@ -48,6 +49,8 @@ function ImportPage() {
     dateFormat: "DD/MM/YYYY",
     hasHeader: true,
     negativeIsExpense: true,
+    currency: DEFAULT_CURRENCY,
+    currencyColumn: null,
   });
 
   const { data: categories = [] } = useCategories();
@@ -65,11 +68,12 @@ function ImportPage() {
       const isExpense = mapping.negativeIsExpense ? row.amount_cents < 0 : row.amount_cents > 0;
       const match = applyRules(row.description, rules);
       const type = match?.type ?? (isExpense ? "EXPENSE" : "INCOME");
-      const hash = dedupeHash(row.occurred_on, Math.abs(row.amount_cents), row.description);
+      const hash = dedupeHash(row.occurred_on, Math.abs(row.amount_cents), row.description, row.currency);
       return {
         occurred_on: row.occurred_on,
         description: row.description,
         amount_cents: Math.abs(row.amount_cents),
+        currency: row.currency,
         type,
         category_id: match?.categoryId ?? null,
         source: "IMPORT",
@@ -170,6 +174,45 @@ function ImportPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="grid gap-2">
+                <Label>Moeda padrão do arquivo</Label>
+                <Select
+                  value={mapping.currency}
+                  onValueChange={(v) => setMapping({ ...mapping, currency: v as CurrencyCode })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCY_LIST.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.code} · {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Coluna de moeda (opcional)</Label>
+                <Select
+                  value={mapping.currencyColumn == null ? "none" : String(mapping.currencyColumn)}
+                  onValueChange={(v) =>
+                    setMapping({ ...mapping, currencyColumn: v === "none" ? null : Number(v) })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem coluna — usar moeda padrão</SelectItem>
+                    {columns.map((col, index) => (
+                      <SelectItem key={index} value={String(index)}>
+                        {col || `Coluna ${index + 1}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
                 <span className="text-sm">Primeira linha é cabeçalho</span>
                 <Switch
@@ -217,7 +260,7 @@ function ImportPage() {
                         {row.duplicate ? " · duplicada" : ""}
                       </p>
                     </div>
-                    <span className="shrink-0 text-sm tabular-nums">{formatCents(row.amount_cents)}</span>
+                    <span className="shrink-0 text-sm tabular-nums">{formatCents(row.amount_cents, row.currency)}</span>
                   </li>
                 ))}
               </ul>

@@ -102,7 +102,7 @@ function TransactionsPage() {
       category_id: form.category_id === "none" ? null : form.category_id,
       account_id: form.account_id === "none" ? null : form.account_id,
       source: "MANUAL",
-      dedupe_hash: dedupeHash(form.occurred_on, amount, form.description),
+      dedupe_hash: dedupeHash(form.occurred_on, amount, form.description, form.currency),
     });
     toast.success("Transação criada.");
     setOpen(false);
