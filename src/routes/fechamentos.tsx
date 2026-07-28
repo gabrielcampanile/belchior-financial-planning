@@ -35,6 +35,8 @@ import {
 import { buildClosureTotals, monthMetrics, netWorthForMonth } from "@/domain/financialMetrics";
 import { closureHighlights } from "@/domain/summaryPhrases";
 import { formatCents, formatPercent, parseCurrencyToCents } from "@/lib/format";
+import { useCurrency } from "@/hooks/useCurrency";
+import { toCurrencyCode } from "@/domain/currency";
 import { currentMonthKey, monthEndISO, monthLabel, monthStartISO, shiftMonth } from "@/lib/months";
 
 export const Route = createFileRoute("/fechamentos")({
@@ -71,10 +73,10 @@ function ClosuresPage() {
   const upsertClosure = useUpsert("closures", "user_id,month");
 
   const metrics = useMemo(
-    () => monthMetrics(month, transactions, incomes, categories),
+    () => monthMetrics(month, transactions, incomes, categories, convert),
     [month, transactions, incomes, categories],
   );
-  const netWorth = netWorthForMonth(month, accounts, balances).netWorth;
+  const netWorth = netWorthForMonth(month, accounts, balances, convert).netWorth;
   const closure = closures.find((c) => c.month === month);
   const uncategorized = transactions.filter((t) => t.type === "EXPENSE" && !t.category_id).length;
   const highlights = closureHighlights(month, metrics);
@@ -146,17 +148,17 @@ function ClosuresPage() {
       </Panel>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricValue label="Receita total" value={formatCents(metrics.income.total)} badge="REAL" />
-        <MetricValue label="Despesas" value={formatCents(metrics.expenses.total)} badge="REAL" />
+        <MetricValue label="Receita total" value={formatCents(metrics.income.total, displayCurrency)} badge="REAL" />
+        <MetricValue label="Despesas" value={formatCents(metrics.expenses.total, displayCurrency)} badge="REAL" />
         <MetricValue
           label="Saldo do mês"
-          value={formatCents(metrics.balance)}
+          value={formatCents(metrics.balance, displayCurrency)}
           tone={metrics.balance >= 0 ? "positive" : "negative"}
           badge="REAL"
         />
         <MetricValue
           label="Aportes"
-          value={formatCents(metrics.investments)}
+          value={formatCents(metrics.investments, displayCurrency)}
           hint={`Taxa ${formatPercent(metrics.investmentRate)}`}
           badge="REAL"
         />
@@ -253,7 +255,7 @@ function ClosuresPage() {
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <span className="text-sm tabular-nums text-positive">
-                    {formatCents(income.amount_cents)}
+                    {formatCents(income.amount_cents, toCurrencyCode(income.currency))}
                   </span>
                   <Button variant="ghost" size="sm" onClick={() => removeIncome.mutate(income.id)}>
                     Excluir

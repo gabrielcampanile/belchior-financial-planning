@@ -26,7 +26,10 @@ import {
 } from "@/hooks/useFinanceData";
 import { TRANSACTION_TYPE_LABEL, type TransactionType } from "@/domain/types";
 import { dedupeHash } from "@/domain/csv";
-import { formatCents, parseCurrencyToCents } from "@/lib/format";
+import { formatApprox, formatCents, parseCurrencyToCents } from "@/lib/format";
+import { useCurrency } from "@/hooks/useCurrency";
+import { CurrencyField } from "@/components/finance/CurrencySelect";
+import { DEFAULT_CURRENCY, money, toCurrencyCode, type CurrencyCode } from "@/domain/currency";
 import { currentMonthKey, formatDateBR, monthEndISO, monthLabel, monthStartISO, shiftMonth } from "@/lib/months";
 
 export const Route = createFileRoute("/transacoes")({
@@ -61,6 +64,7 @@ function TransactionsPage() {
   const upsert = useUpsert("transactions");
   const update = useUpdateRow("transactions");
   const remove = useDeleteRow("transactions");
+  const { convert, displayCurrency } = useCurrency();
 
   const filtered = useMemo(
     () =>
@@ -79,6 +83,7 @@ function TransactionsPage() {
     type: "EXPENSE" as TransactionType,
     category_id: "none",
     account_id: "none",
+    currency: DEFAULT_CURRENCY as CurrencyCode,
   });
 
   async function createTransaction() {
@@ -92,6 +97,7 @@ function TransactionsPage() {
       occurred_on: form.occurred_on,
       description: form.description.trim(),
       amount_cents: amount,
+      currency: form.currency,
       type: form.type,
       category_id: form.category_id === "none" ? null : form.category_id,
       account_id: form.account_id === "none" ? null : form.account_id,
@@ -145,6 +151,13 @@ function TransactionsPage() {
                       value={form.amount}
                       placeholder="1.234,56"
                       onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Moeda</Label>
+                    <CurrencyField
+                      value={form.currency}
+                      onChange={(currency) => setForm({ ...form, currency })}
                     />
                   </div>
                   <div className="grid gap-2">
@@ -283,11 +296,19 @@ function TransactionsPage() {
                     </SelectContent>
                   </Select>
                   <span
-                    className={`w-28 text-right text-sm tabular-nums ${
+                    className={`w-32 text-right text-sm tabular-nums ${
                       tx.type === "INCOME" ? "text-positive" : "text-foreground"
                     }`}
                   >
-                    {formatCents(tx.amount_cents)}
+                    {formatCents(tx.amount_cents, toCurrencyCode(tx.currency))}
+                    {toCurrencyCode(tx.currency) !== displayCurrency ? (
+                      <span className="block text-xs text-muted-foreground">
+                        {formatApprox(
+                          convert(money(tx.amount_cents, toCurrencyCode(tx.currency)), tx.occurred_on),
+                          displayCurrency,
+                        )}
+                      </span>
+                    ) : null}
                   </span>
                   <Button
                     variant="ghost"
