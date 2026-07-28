@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useInvalidateFinance, useUpsert } from "@/hooks/useFinanceData";
@@ -36,6 +37,7 @@ const STEPS = [
 
 function OnboardingPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const invalidate = useInvalidateFinance();
   const [step, setStep] = useState(0);
   const [values, setValues] = useState<Record<string, string>>({});
