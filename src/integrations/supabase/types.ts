@@ -19,6 +19,7 @@ export type Database = {
           account_id: string
           balance_cents: number
           created_at: string
+          currency: Database["public"]["Enums"]["currency_code"]
           id: string
           is_demo: boolean
           month: string
@@ -29,6 +30,7 @@ export type Database = {
           account_id: string
           balance_cents?: number
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
           id?: string
           is_demo?: boolean
           month: string
@@ -39,6 +41,7 @@ export type Database = {
           account_id?: string
           balance_cents?: number
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
           id?: string
           is_demo?: boolean
           month?: string
@@ -59,6 +62,7 @@ export type Database = {
         Row: {
           archived: boolean
           created_at: string
+          currency: Database["public"]["Enums"]["currency_code"]
           id: string
           is_demo: boolean
           liquid: boolean
@@ -72,6 +76,7 @@ export type Database = {
         Insert: {
           archived?: boolean
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
           id?: string
           is_demo?: boolean
           liquid?: boolean
@@ -85,6 +90,7 @@ export type Database = {
         Update: {
           archived?: boolean
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
           id?: string
           is_demo?: boolean
           liquid?: boolean
@@ -239,6 +245,39 @@ export type Database = {
         }
         Relationships: []
       }
+      exchange_rates: {
+        Row: {
+          base_currency: Database["public"]["Enums"]["currency_code"]
+          created_at: string
+          effective_on: string
+          id: string
+          quote_currency: Database["public"]["Enums"]["currency_code"]
+          rate: number
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          base_currency: Database["public"]["Enums"]["currency_code"]
+          created_at?: string
+          effective_on: string
+          id?: string
+          quote_currency: Database["public"]["Enums"]["currency_code"]
+          rate: number
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          base_currency?: Database["public"]["Enums"]["currency_code"]
+          created_at?: string
+          effective_on?: string
+          id?: string
+          quote_currency?: Database["public"]["Enums"]["currency_code"]
+          rate?: number
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       import_profiles: {
         Row: {
           config: Json
@@ -270,6 +309,7 @@ export type Database = {
         Row: {
           amount_cents: number
           created_at: string
+          currency: Database["public"]["Enums"]["currency_code"]
           id: string
           is_demo: boolean
           month: string
@@ -283,6 +323,7 @@ export type Database = {
         Insert: {
           amount_cents?: number
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
           id?: string
           is_demo?: boolean
           month: string
@@ -296,6 +337,7 @@ export type Database = {
         Update: {
           amount_cents?: number
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
           id?: string
           is_demo?: boolean
           month?: string
@@ -312,6 +354,7 @@ export type Database = {
         Row: {
           created_at: string
           currency: string
+          display_currency: Database["public"]["Enums"]["currency_code"]
           display_name: string
           first_day_of_month: number
           id: string
@@ -322,6 +365,7 @@ export type Database = {
         Insert: {
           created_at?: string
           currency?: string
+          display_currency?: Database["public"]["Enums"]["currency_code"]
           display_name?: string
           first_day_of_month?: number
           id: string
@@ -332,6 +376,7 @@ export type Database = {
         Update: {
           created_at?: string
           currency?: string
+          display_currency?: Database["public"]["Enums"]["currency_code"]
           display_name?: string
           first_day_of_month?: number
           id?: string
@@ -375,6 +420,7 @@ export type Database = {
           category_id: string | null
           closure_id: string | null
           created_at: string
+          currency: Database["public"]["Enums"]["currency_code"]
           dedupe_hash: string
           description: string
           id: string
@@ -392,6 +438,7 @@ export type Database = {
           category_id?: string | null
           closure_id?: string | null
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
           dedupe_hash: string
           description: string
           id?: string
@@ -409,6 +456,7 @@ export type Database = {
           category_id?: string | null
           closure_id?: string | null
           created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
           dedupe_hash?: string
           description?: string
           id?: string
@@ -452,7 +500,7 @@ export type Database = {
       seed_defaults: { Args: { _uid: string }; Returns: undefined }
     }
     Enums: {
-      [_ in never]: never
+      currency_code: "BRL" | "CAD" | "USD" | "EUR" | "ARS"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -579,6 +627,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      currency_code: ["BRL", "CAD", "USD", "EUR", "ARS"],
+    },
   },
 } as const
