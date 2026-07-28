@@ -22,6 +22,7 @@ import {
 } from "@/domain/financialMetrics";
 import { dashboardPhrase } from "@/domain/summaryPhrases";
 import { formatCents, formatCentsShort, formatPercent } from "@/lib/format";
+import { useCurrency } from "@/hooks/useCurrency";
 import {
   currentMonthKey,
   greetingForHour,
@@ -66,15 +67,15 @@ function DashboardPage() {
   });
 
   const metrics = useMemo(
-    () => monthMetrics(month, transactions, incomes, categories),
+    () => monthMetrics(month, transactions, incomes, categories, convert),
     [month, transactions, incomes, categories],
   );
   const series = useMemo(
-    () => netWorthSeries(lastMonths(month, 12), accounts, balances),
+    () => netWorthSeries(lastMonths(month, 12), accounts, balances, convert),
     [month, accounts, balances],
   );
-  const now = netWorthForMonth(month, accounts, balances);
-  const previous = netWorthForMonth(shiftMonth(month, -1), accounts, balances);
+  const now = netWorthForMonth(month, accounts, balances, convert);
+  const previous = netWorthForMonth(shiftMonth(month, -1), accounts, balances, convert);
   const essentialMonthly = metrics.expenses.essential || metrics.expenses.total;
   const months = reserveMonths(now.liquid, essentialMonthly);
   const targetMonths = settings?.emergency_months ?? 6;
@@ -123,26 +124,26 @@ function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <MetricValue
           label="Patrimônio líquido"
-          value={formatCents(now.netWorth)}
-          hint={`Ativos ${formatCents(now.assets)} · Passivos ${formatCents(now.liabilities)}`}
+          value={formatCents(now.netWorth, displayCurrency)}
+          hint={`Ativos ${formatCents(now.assets, displayCurrency)} · Passivos ${formatCents(now.liabilities, displayCurrency)}`}
           badge="REAL"
           tone="accent"
         />
         <MetricValue
           label="Receita recorrente"
-          value={formatCents(metrics.income.recurring)}
-          hint={`Total do mês ${formatCents(metrics.income.total)}`}
+          value={formatCents(metrics.income.recurring, displayCurrency)}
+          hint={`Total do mês ${formatCents(metrics.income.total, displayCurrency)}`}
           badge="REAL"
         />
         <MetricValue
           label="Despesas do mês"
-          value={formatCents(metrics.expenses.total)}
-          hint={`Essenciais ${formatCents(metrics.expenses.essential)}`}
+          value={formatCents(metrics.expenses.total, displayCurrency)}
+          hint={`Essenciais ${formatCents(metrics.expenses.essential, displayCurrency)}`}
           badge="REAL"
         />
         <MetricValue
           label="Saldo do mês"
-          value={formatCents(metrics.balance)}
+          value={formatCents(metrics.balance, displayCurrency)}
           tone={metrics.balance >= 0 ? "positive" : "negative"}
           hint={`Taxa de poupança ${formatPercent(metrics.savingsRate)}`}
           badge="REAL"
@@ -150,13 +151,13 @@ function DashboardPage() {
         <MetricValue
           label="Taxa de investimento"
           value={formatPercent(metrics.investmentRate)}
-          hint={`Aportes ${formatCents(metrics.investments)}`}
+          hint={`Aportes ${formatCents(metrics.investments, displayCurrency)}`}
           badge="REAL"
         />
         <MetricValue
           label="Reserva financeira"
           value={`${months.toFixed(1)} meses`}
-          hint={`Líquido ${formatCents(now.liquid)} · meta ${formatCents(emergencyFundTarget(essentialMonthly, targetMonths))}`}
+          hint={`Líquido ${formatCents(now.liquid, displayCurrency)} · meta ${formatCents(emergencyFundTarget(essentialMonthly, targetMonths, displayCurrency))}`}
           tone={months >= targetMonths ? "positive" : "neutral"}
           badge="REAL"
         />
@@ -187,7 +188,7 @@ function DashboardPage() {
                   stroke="var(--muted-foreground)"
                   fontSize={11}
                   width={70}
-                  tickFormatter={(v: number) => formatCentsShort(v * 100)}
+                  tickFormatter={(v: number) => formatCentsShort(v * 100, displayCurrency)}
                 />
                 <Tooltip
                   contentStyle={{
@@ -197,7 +198,7 @@ function DashboardPage() {
                     color: "var(--popover-foreground)",
                     fontSize: 12,
                   }}
-                  formatter={(v: number) => [formatCents(v * 100), "Patrimônio"]}
+                  formatter={(v: number) => [formatCents(v * 100, displayCurrency), "Patrimônio"]}
                 />
                 <Line
                   type="monotone"
@@ -233,7 +234,7 @@ function DashboardPage() {
               <li key={row.categoryId ?? "none"} className="flex items-center justify-between gap-4 py-3">
                 <span className="min-w-0 truncate text-sm text-foreground">{row.name}</span>
                 <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-                  {formatCents(row.total)}
+                  {formatCents(row.total, displayCurrency)}
                 </span>
               </li>
             ))}
