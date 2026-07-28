@@ -9,8 +9,68 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TransacoesRouteImport } from './routes/transacoes'
+import { Route as RelatoriosRouteImport } from './routes/relatorios'
+import { Route as PlanejamentoRouteImport } from './routes/planejamento'
+import { Route as PatrimonioRouteImport } from './routes/patrimonio'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as ImportarRouteImport } from './routes/importar'
+import { Route as FechamentosRouteImport } from './routes/fechamentos'
+import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as CenariosRouteImport } from './routes/cenarios'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TransacoesRoute = TransacoesRouteImport.update({
+  id: '/transacoes',
+  path: '/transacoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RelatoriosRoute = RelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanejamentoRoute = PlanejamentoRouteImport.update({
+  id: '/planejamento',
+  path: '/planejamento',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PatrimonioRoute = PatrimonioRouteImport.update({
+  id: '/patrimonio',
+  path: '/patrimonio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImportarRoute = ImportarRouteImport.update({
+  id: '/importar',
+  path: '/importar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FechamentosRoute = FechamentosRouteImport.update({
+  id: '/fechamentos',
+  path: '/fechamentos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CenariosRoute = CenariosRouteImport.update({
+  id: '/cenarios',
+  path: '/cenarios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -19,28 +79,172 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/cenarios': typeof CenariosRoute
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/fechamentos': typeof FechamentosRoute
+  '/importar': typeof ImportarRoute
+  '/onboarding': typeof OnboardingRoute
+  '/patrimonio': typeof PatrimonioRoute
+  '/planejamento': typeof PlanejamentoRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/transacoes': typeof TransacoesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/cenarios': typeof CenariosRoute
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/fechamentos': typeof FechamentosRoute
+  '/importar': typeof ImportarRoute
+  '/onboarding': typeof OnboardingRoute
+  '/patrimonio': typeof PatrimonioRoute
+  '/planejamento': typeof PlanejamentoRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/transacoes': typeof TransacoesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/cenarios': typeof CenariosRoute
+  '/configuracoes': typeof ConfiguracoesRoute
+  '/fechamentos': typeof FechamentosRoute
+  '/importar': typeof ImportarRoute
+  '/onboarding': typeof OnboardingRoute
+  '/patrimonio': typeof PatrimonioRoute
+  '/planejamento': typeof PlanejamentoRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/transacoes': typeof TransacoesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/cenarios'
+    | '/configuracoes'
+    | '/fechamentos'
+    | '/importar'
+    | '/onboarding'
+    | '/patrimonio'
+    | '/planejamento'
+    | '/relatorios'
+    | '/transacoes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/cenarios'
+    | '/configuracoes'
+    | '/fechamentos'
+    | '/importar'
+    | '/onboarding'
+    | '/patrimonio'
+    | '/planejamento'
+    | '/relatorios'
+    | '/transacoes'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/cenarios'
+    | '/configuracoes'
+    | '/fechamentos'
+    | '/importar'
+    | '/onboarding'
+    | '/patrimonio'
+    | '/planejamento'
+    | '/relatorios'
+    | '/transacoes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthRoute: typeof AuthRoute
+  CenariosRoute: typeof CenariosRoute
+  ConfiguracoesRoute: typeof ConfiguracoesRoute
+  FechamentosRoute: typeof FechamentosRoute
+  ImportarRoute: typeof ImportarRoute
+  OnboardingRoute: typeof OnboardingRoute
+  PatrimonioRoute: typeof PatrimonioRoute
+  PlanejamentoRoute: typeof PlanejamentoRoute
+  RelatoriosRoute: typeof RelatoriosRoute
+  TransacoesRoute: typeof TransacoesRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/transacoes': {
+      id: '/transacoes'
+      path: '/transacoes'
+      fullPath: '/transacoes'
+      preLoaderRoute: typeof TransacoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/relatorios': {
+      id: '/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof RelatoriosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planejamento': {
+      id: '/planejamento'
+      path: '/planejamento'
+      fullPath: '/planejamento'
+      preLoaderRoute: typeof PlanejamentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/patrimonio': {
+      id: '/patrimonio'
+      path: '/patrimonio'
+      fullPath: '/patrimonio'
+      preLoaderRoute: typeof PatrimonioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/importar': {
+      id: '/importar'
+      path: '/importar'
+      fullPath: '/importar'
+      preLoaderRoute: typeof ImportarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fechamentos': {
+      id: '/fechamentos'
+      path: '/fechamentos'
+      fullPath: '/fechamentos'
+      preLoaderRoute: typeof FechamentosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cenarios': {
+      id: '/cenarios'
+      path: '/cenarios'
+      fullPath: '/cenarios'
+      preLoaderRoute: typeof CenariosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -53,6 +257,16 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthRoute: AuthRoute,
+  CenariosRoute: CenariosRoute,
+  ConfiguracoesRoute: ConfiguracoesRoute,
+  FechamentosRoute: FechamentosRoute,
+  ImportarRoute: ImportarRoute,
+  OnboardingRoute: OnboardingRoute,
+  PatrimonioRoute: PatrimonioRoute,
+  PlanejamentoRoute: PlanejamentoRoute,
+  RelatoriosRoute: RelatoriosRoute,
+  TransacoesRoute: TransacoesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
