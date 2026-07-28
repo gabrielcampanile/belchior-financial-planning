@@ -1,6 +1,7 @@
 import { formatCents, formatPercent } from "@/lib/format";
 import { monthLabel } from "@/lib/months";
 import type { MonthMetrics } from "./financialMetrics";
+import { DEFAULT_CURRENCY, type CurrencyCode } from "./currency";
 
 /**
  * Frases contextuais determinísticas para o dashboard.
@@ -14,21 +15,24 @@ export interface ContextPhraseInput {
   hasData: boolean;
   reserveMonths: number;
   emergencyMonthsTarget: number;
+  /** Moeda de visualização — os valores já chegam convertidos. */
+  currency?: CurrencyCode;
 }
 
 export function dashboardPhrase(input: ContextPhraseInput): string {
+  const currency = input.currency ?? DEFAULT_CURRENCY;
   if (!input.hasData) {
     return "Ainda não há dados suficientes. Comece registrando seu patrimônio ou importando transações.";
   }
 
   if (input.netWorthPrevious != null && input.netWorthPrevious !== input.netWorthNow) {
     const delta = input.netWorthNow - input.netWorthPrevious;
-    if (delta > 0) return `Seu patrimônio cresceu ${formatCents(delta)} neste mês.`;
-    return `Seu patrimônio recuou ${formatCents(Math.abs(delta))} neste mês.`;
+    if (delta > 0) return `Seu patrimônio cresceu ${formatCents(delta, currency)} neste mês.`;
+    return `Seu patrimônio recuou ${formatCents(Math.abs(delta, currency))} neste mês.`;
   }
 
   if (input.metrics.income.total > 0 && input.metrics.balance < 0) {
-    return `Neste mês suas despesas superaram as receitas em ${formatCents(Math.abs(input.metrics.balance))}.`;
+    return `Neste mês suas despesas superaram as receitas em ${formatCents(Math.abs(input.metrics.balance, currency))}.`;
   }
 
   if (input.metrics.income.total > 0) {
@@ -49,11 +53,15 @@ export interface RealHighlight {
 }
 
 /** Destaques determinísticos do fechamento de um mês. */
-export function closureHighlights(month: string, metrics: MonthMetrics): RealHighlight[] {
+export function closureHighlights(
+  month: string,
+  metrics: MonthMetrics,
+  currency: CurrencyCode = DEFAULT_CURRENCY,
+): RealHighlight[] {
   const highlights: RealHighlight[] = [
     {
       label: `Resumo de ${monthLabel(month)}`,
-      value: `Você recebeu ${formatCents(metrics.income.total)} e gastou ${formatCents(metrics.expenses.total)}.`,
+      value: `Você recebeu ${formatCents(metrics.income.total, currency)} e gastou ${formatCents(metrics.expenses.total, currency)}.`,
       tone: metrics.balance >= 0 ? "positive" : "negative",
     },
   ];
@@ -62,7 +70,7 @@ export function closureHighlights(month: string, metrics: MonthMetrics): RealHig
   if (top.length) {
     highlights.push({
       label: "Maiores categorias",
-      value: top.map((c) => `${c.name} (${formatCents(c.total)})`).join(" · "),
+      value: top.map((c) => `${c.name} (${formatCents(c.total, currency)})`).join(" · "),
       tone: "neutral",
     });
   }
@@ -70,7 +78,7 @@ export function closureHighlights(month: string, metrics: MonthMetrics): RealHig
   if (metrics.income.extraordinary > 0) {
     highlights.push({
       label: "Receita extraordinária",
-      value: `${formatCents(metrics.income.extraordinary)} não fazem parte da sua renda recorrente.`,
+      value: `${formatCents(metrics.income.extraordinary, currency)} não fazem parte da sua renda recorrente.`,
       tone: "neutral",
     });
   }
