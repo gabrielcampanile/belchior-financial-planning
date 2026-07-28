@@ -236,16 +236,17 @@ function PatrimonioPage() {
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="text-xs text-muted-foreground">{toCurrencyCode(account.currency)}</span>
-                  <Input
-                    className="h-9 w-36 text-right tabular-nums"
-                    defaultValue={centsToInput(balanceOf(account.id))}
+                  <BalanceInput
                     key={`${account.id}-${month}`}
-                    onBlur={(e) => saveBalance(account.id, e.target.value)}
+                    initial={centsToInput(balanceOf(account.id))}
+                    pending={upsertBalance.isPending}
+                    onSave={(value) => saveBalance(account.id, value)}
                   />
                   <Button variant="ghost" size="sm" onClick={() => removeAccount.mutate(account.id)}>
                     Excluir
                   </Button>
                 </div>
+
               </li>
             ))}
           </ul>
