@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { CurrencyCode } from "@/domain/currency";
 import type {
   Account,
   AccountBalance,
@@ -14,6 +15,7 @@ export interface Profile {
   id: string;
   display_name: string;
   currency: string;
+  display_currency: CurrencyCode;
   theme: string;
   first_day_of_month: number;
   onboarded: boolean;
