@@ -109,8 +109,9 @@ function PatrimonioPage() {
 
   async function saveBalance(accountId: string, raw: string) {
     const cents = parseCurrencyToCents(raw) ?? 0;
-    const current = balanceOf(accountId);
-    if (cents === current) return;
+    const hasRow = balances.some((b) => b.account_id === accountId && b.month === month);
+    if (hasRow && cents === exactBalanceOf(accountId)) return;
+
     try {
       await upsertBalance.mutateAsync({
         account_id: accountId,
