@@ -1,80 +1,57 @@
-## Belchior — Personal Finance OS · FASE 1 (Fundação)
+# Fase 1.1 — Multi-Currency Foundation
 
-Produto novo, do zero. Sem IA. Todos os cálculos determinísticos em código.
-Ao final da Fase 1 eu apresento um resumo e aguardo seu comando para a Fase 2.
+Objetivo: tornar o domínio financeiro currency-aware sem mudar o visual do produto, sem tocar na Fase 2 e sem alterar nenhum dado existente.
 
-### Ajustes de stack (necessários nesta plataforma)
-- Roteamento: **TanStack Router** (file-based em `src/routes/`) no lugar de React Router — mesma experiência de navegação.
-- Backend: **Lovable Cloud** (Postgres + Auth + RLS gerenciados). Sem serviços externos, nenhum dado financeiro sai do backend/browser.
-- Mantidos: React, TypeScript, Vite, Tailwind, shadcn/ui, Recharts, date-fns, Zod, Lucide.
+## 1. Banco de dados (uma migration)
 
----
+Moedas suportadas: BRL (default), CAD, USD, EUR, ARS.
 
-### 1. Design system (dark premium por padrão)
-- Tokens em `src/styles.css`: fundo quase preto, superfícies levemente elevadas, bordas de baixíssimo contraste, verde para positivo, vermelho reservado, um accent sofisticado (azul-petróleo/âmbar frio) para ações e investimentos. Light mode como variante.
-- Fonte Inter via `<link>` no root. Tipografia com números tabulares, valores grandes, muito espaçamento.
-- Componentes base: `MetricValue`, `DataBadge` (REAL / PLANEJADO / PROJETADO), `SectionHeader`, `EmptyState`, `AssumptionNote`.
-- Formatação `pt-BR` / `BRL` centralizada em `src/lib/format.ts`. Valores monetários guardados como inteiros em centavos.
+- Novo enum `currency_code` com os 5 códigos.
+- Coluna `currency currency_code NOT NULL DEFAULT 'BRL'` em: `transactions`, `income_entries`, `accounts`, `account_balances`. Como todas as linhas atuais são BRL, o default preenche o histórico sem alterar valores.
+  - `accounts.currency` = moeda nativa da conta (usada como default nos saldos e transações da conta).
+  - `account_balances.currency` = moeda do saldo daquele mês (permanece imutável no histórico).
+- Coluna `display_currency` na preferência do usuário: reaproveitar `profiles.currency` (já existe, default 'BRL') convertendo-a para o enum — evita duas fontes de verdade.
+- Nova tabela `exchange_rates`: `base_currency`, `quote_currency`, `rate numeric`, `effective_on date`, `source text`, único por (base, quote, effective_on). Leitura pública para usuários autenticados (dados de câmbio não são financeiros do usuário), escrita apenas por service_role — nenhum vazamento entre usuários. GRANTs explícitos + RLS conforme padrão do projeto.
+- Nenhum `UPDATE`/`DELETE` em dados existentes; nenhum valor convertido persistido.
 
-### 2. Layout e navegação
-- Sidebar compacta no desktop; bottom nav no mobile.
-- Itens (rotas já criadas na Fase 1, com estado vazio elegante nas de fases futuras): Visão geral, Transações, Fechamentos, Planejamento, Cenários, Patrimônio, Relatórios, Configurações.
-- Rota pública `/auth` (e-mail/senha + Google), demais rotas sob gate autenticado. Onboarding em `/onboarding`.
+## 2. Domínio (`src/domain/`)
 
-### 3. Banco de dados (RLS por usuário em todas as tabelas)
-- `profiles` — nome de exibição, moeda, tema, primeiro dia do mês.
-- `settings` — rentabilidade mensal esperada (default 0,8%), meses de reserva (default 6), preferências.
-- `categories` / `subcategories` — hierarquia editável, flag `essential`, ordem, cor/ícone; seed das categorias padrão da sua lista no primeiro acesso.
-- `categorization_rules` — padrão de texto, tipo de match, prioridade, categoria/subcategoria destino.
-- `transactions` — data, descrição, valor (centavos), tipo (`EXPENSE` / `INCOME` / `TRANSFER` / `INVESTMENT_CONTRIBUTION`), categoria, conta, origem (import/manual), hash de dedupe, `closure_id`.
-- `income_entries` — receitas **reais** (salário, VR, bolsa, PLR, freelance, rendimentos, outras) com flags `recurring` / `temporary` / `extraordinary`.
-- `accounts` (conta corrente, poupança, investimentos, renda fixa, ações, fundos, previdência, bens, dívidas) e `account_balances` (snapshot mensal) → patrimônio histórico real.
-- `closures` — fechamento mensal com totais congelados e status.
-- Tabelas de planejamento (cenários, income/expense plans, eventos, metas) ficam para a Fase 2.
+- `src/domain/currency.ts`: `CurrencyCode`, metadados (símbolo, locale, nome), `DEFAULT_CURRENCY = "BRL"`, tipo `Money { amountCents: number; currency: CurrencyCode }`, helpers `money()`, `isSameCurrency()`.
+- `src/domain/exchange.ts`: tipo `ExchangeRate { base, quote, rate, effectiveOn, source }`, `RateTable` (índice em memória), funções puras:
+  - `findRate(table, base, quote, onDate)` — usa a cotação vigente **na data**, com fallback à mais recente anterior; suporta inversão (BRL→CAD a partir de CAD→BRL) e triangulação via BRL.
+  - `convertMoney(money, target, rateLookup)` — determinística, retorna novo `Money`, identidade quando as moedas coincidem, nunca muta a origem.
+  - `sumMoney(list, target, lookup, onDate)` — converte item a item **antes** de somar (patrimônio multimoeda).
+- `financialMetrics.ts`: assinaturas passam a receber um conversor + moeda alvo; agregações (patrimônio, despesas, receitas, taxas) convertem cada componente antes de somar. Transferências e aportes continuam fora de despesa — regra intocada.
+- Formatação centralizada em `src/lib/format.ts`: `formatMoney(money)` via `Intl.NumberFormat("pt-BR", { currency })` → `R$ 5.267,00`, `CA$ 699,00`, `US$ 1.000,00`, `€ 1.000,00`, `AR$ …`. Nenhum símbolo escrito à mão em componentes.
 
-### 4. Transações
-- Lista com filtros (período, categoria, tipo, texto), edição inline de categoria, seleção múltipla, criar/editar/excluir manual.
-- Transferências e aportes marcados explicitamente e **excluídos das despesas**; não alteram patrimônio líquido, só a alocação.
+## 3. Serviço de cotação
 
-### 5. Importação CSV
-- Upload → detecção de delimitador/encoding → mapeamento configurável de colunas (data, descrição, valor, débito/crédito) → escolha de formato de data e sinal → **preview** com contagem de novas/duplicadas → confirmação.
-- Perfis de import salvos por banco para reutilização. Dedupe por hash (data+valor+descrição).
+- `src/lib/exchangeRates.functions.ts` (server function) + `src/lib/exchangeRates.server.ts`:
+  - `getRates()` — lê `exchange_rates` do banco.
+  - `refreshRates()` — busca cotações do dia numa fonte pública sem chave (Frankfurter/ECB, com ARS via fallback) e faz upsert de uma linha por par/dia; nunca sobrescreve datas passadas. Chamada sob demanda (botão em Configurações) e no máximo uma vez por dia.
+- Nenhuma chamada HTTP em componente React. Carregamento no cliente via um único `useQuery` com `staleTime` longo (`useExchangeRates`), reutilizado por toda a app através de um `CurrencyProvider` — sem refetch por render.
 
-### 6. Categorização automática
-- Motor `domain/categorizationEngine.ts`: regras por prioridade, match por `contains` / `startsWith` / `regex`, case-insensitive e sem acento.
-- Seed de regras comuns (UBER, SUPERMERCADO, IFOOD, POSTO, XP INVESTIMENTOS…). CRUD completo de regras em Configurações, com reordenação e botão "reaplicar regras".
+## 4. UI (mudanças mínimas, visual preservado)
 
-### 7. Fechamento mensal
-- Fluxo em etapas: importar → categorizar (fila de não categorizadas) → revisar receitas → atualizar saldos de contas → fechar.
-- Detalhe do fechamento: totais por categoria, receita recorrente vs extraordinária, saldo do mês, variação patrimonial, comparação com mês anterior. Reabertura permitida.
+- `CurrencyProvider` + `useCurrency()`: expõe `displayCurrency`, `setDisplayCurrency` (persiste no perfil) e `convert/format` prontos.
+- Seletor discreto "Moeda: BRL ▾" no header do `AppLayout` (e em Configurações), global para o usuário.
+- Dashboard: mesmos cards e gráficos, valores na moeda de visualização; nota discreta quando houver conversão (`≈` + rótulo da data da cotação).
+- Transações: valor exibido **sempre na moeda original** (`CAD 699,00`) com linha secundária `≈ R$ 2.756,00` quando a moeda de visualização difere.
+- Formulários (transação, receita, conta, saldo): campo Moeda obrigatório, pré-preenchido com a moeda da conta ou o default do usuário.
+- Patrimônio: cada conta mostra sua moeda original; totais convertidos antes de agregar, com indicação de que o total é convertido.
+- Importação CSV: mapeamento ganha coluna opcional "Moeda"; sem coluna, usa a moeda padrão do usuário (CSVs atuais continuam funcionando). O preview exibe a coluna Moeda antes de importar. O `dedupe_hash` passa a incluir a moeda para não fundir 699 CAD com 699 BRL — hashes antigos permanecem válidos para linhas já importadas em BRL.
 
-### 8. Patrimônio
-- Cadastro de contas com classificação em Ativos / Passivos e flag de liquidez.
-- Snapshot mensal de saldos; `NetWorth = Ativos − Passivos`.
-- Gráfico de linha do patrimônio **histórico real** (linha contínua). A camada projetada entra na Fase 2, já preparada visualmente.
+## 5. Testes
 
-### 9. Dashboard (Visão geral)
-- Saudação por horário + frase contextual determinística (regras em código, sem IA).
-- Indicadores: patrimônio líquido, receita recorrente, despesas do mês, taxa de investimento, saldo do mês, reserva financeira (ativos líquidos e meses cobertos).
-- Gráfico de patrimônio histórico e resumo do mês corrente. Poucos elementos, hierarquia clara.
+Adicionar Vitest (`bunx vitest run`) e `src/domain/__tests__/currency.test.ts` cobrindo os 9 casos pedidos: identidade BRL→BRL, CAD→BRL com taxa 4, BRL→CAD com 0,25, troca de moeda de visualização não muta o persistido, transação 699 CAD permanece 699 CAD, agregação de 3 ativos em moedas distintas, uso da cotação da data para transação antiga, CSV sem coluna moeda (default BRL) e CSV com moeda.
 
-### 10. Onboarding (primeiro acesso)
-Seis perguntas curtas: patrimônio atual, renda mensal, principais despesas, meses de reserva desejados, receitas temporárias, uma meta. Cria conta inicial de patrimônio, categorias padrão, configurações e a meta de reserva. Pulável e reeditável.
+## Detalhes técnicos
 
-### 11. Dados de demonstração (removíveis)
-Botão em Configurações: "Carregar cenário de demonstração — Família Ago/2026–Ago/2027" com transações, receitas e patrimônio marcados como `is_demo`, banner visível e botão "Remover dados de demonstração". Nada hardcoded na lógica: são só linhas no banco criadas pela mesma UI/regras do produto.
+- Valores continuam inteiros em centavos; conversão arredonda apenas na apresentação (`Math.round`), nunca na persistência.
+- `exchange_rates` guarda `rate` como numeric para evitar perda de precisão.
+- Tipos gerados do banco são regenerados após a migration; o código que depende do novo enum é escrito depois disso.
+- Verificação final: typecheck, build, testes, lint e revisão visual desktop + mobile.
 
-### 12. Preparação para o motor financeiro (Fase 2)
-Já nesta fase crio a pasta `src/domain/` com tipos compartilhados e `financialMetrics.ts` (taxa de poupança, taxa de investimento, custo total/essencial/discricionário, reserva em meses) usados pelo dashboard sobre dados reais. `projectionEngine.ts`, `insightEngine.ts`, `scenarioEngine.ts`, `goalEngine.ts`, `budgetEngine.ts` entram nas fases seguintes, junto com os casos de teste do PDF (bolsa, PLR, parcelas, transferência, juros compostos).
+## Limites
 
----
-
-### Detalhes técnicos
-- Estrutura: `src/domain/` (puro, sem React), `src/lib/` (persistência e formatação), `src/hooks/` (React Query), `src/components/<módulo>/`, rotas em `src/routes/`.
-- Nenhuma lógica financeira dentro de componentes; funções puras e memoizadas.
-- Zod valida todo input de formulário e todo CSV parseado.
-- RLS: cada tabela com política `auth.uid() = user_id` e GRANTs explícitos; nenhum dado público.
-- Verificação de build/TypeScript ao final da fase.
-
-### Fora do escopo da Fase 1
-Cenários, planos de receita/despesa, projeções, eventos, metas, what-if, health score, insights, relatórios e exportação PDF — Fases 2 a 5.
+Nada de planning, cenários, projeção, metas, spread cambial, ganho/perda cambial, conta multimoeda ou integração bancária. A fase termina aqui.

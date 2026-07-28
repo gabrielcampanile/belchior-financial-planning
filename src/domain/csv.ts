@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CURRENCY_CODES, DEFAULT_CURRENCY, toCurrencyCode, type CurrencyCode } from "./currency";
 
 /** Parser de CSV tolerante: detecta delimitador, respeita aspas, ignora linhas vazias. */
 
@@ -110,6 +111,10 @@ export const importMappingSchema = z.object({
   hasHeader: z.boolean(),
   /** true quando valores negativos representam despesa (padrão de extrato) */
   negativeIsExpense: z.boolean(),
+  /** Moeda aplicada a todas as linhas quando não há coluna de moeda. */
+  currency: z.enum(CURRENCY_CODES),
+  /** Coluna opcional com o código da moeda de cada linha. */
+  currencyColumn: z.number().int().min(0).nullable(),
 });
 
 export type ImportMapping = z.infer<typeof importMappingSchema>;
@@ -118,6 +123,8 @@ export interface ParsedRow {
   occurred_on: string;
   description: string;
   amount_cents: number;
+  /** Moeda ORIGINAL da linha — nunca convertida na importação. */
+  currency: CurrencyCode;
   raw: string[];
 }
 
@@ -145,15 +152,24 @@ export function mapRows(rows: string[][], mapping: ImportMapping): {
       invalid.push({ line: index + 1, reason: "Valor inválido" });
       return;
     }
-    parsed.push({ occurred_on: date, description, amount_cents: amount, raw: row });
+    const currency =
+      mapping.currencyColumn != null
+        ? toCurrencyCode(row[mapping.currencyColumn], mapping.currency)
+        : mapping.currency;
+    parsed.push({ occurred_on: date, description, amount_cents: amount, currency, raw: row });
   });
 
   return { parsed, invalid };
 }
 
 /** Hash determinístico para deduplicação (data + valor + descrição normalizada). */
-export function dedupeHash(occurredOn: string, amountCents: number, description: string): string {
-  const base = `${occurredOn}|${amountCents}|${description
+export function dedupeHash(
+  occurredOn: string,
+  amountCents: number,
+  description: string,
+  currency: CurrencyCode = DEFAULT_CURRENCY,
+): string {
+  const base = `${occurredOn}|${amountCents}|${currency}|${description
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()

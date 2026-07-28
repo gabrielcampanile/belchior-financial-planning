@@ -25,6 +25,11 @@ import {
 import { applyRules } from "@/domain/categorizationEngine";
 import { buildDemoData, DEMO_ACCOUNTS } from "@/lib/demoData";
 import type { MatchType } from "@/domain/types";
+import { useCurrency, useExchangeRates } from "@/hooks/useCurrency";
+import { CurrencySelect } from "@/components/finance/CurrencySelect";
+import { refreshExchangeRates } from "@/lib/exchangeRates.functions";
+import { useServerFn } from "@tanstack/react-start";
+import { formatNumber } from "@/lib/format";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({
@@ -56,6 +61,26 @@ function SettingsPage() {
   const { data: categories = [] } = useCategories();
   const { data: rules = [] } = useRules();
   const { data: transactions = [] } = useTransactions();
+  const { rates, displayCurrency } = useCurrency();
+  const { refetch: refetchRates, isFetching: ratesLoading } = useExchangeRates();
+  const runRefreshRates = useServerFn(refreshExchangeRates);
+
+  async function updateRates() {
+    setBusy(true);
+    try {
+      const result = await runRefreshRates({});
+      await refetchRates();
+      toast.success(
+        result.updated
+          ? `Cotações de ${result.effectiveOn} atualizadas (${result.pairs} pares).`
+          : "As cotações de hoje já estavam atualizadas.",
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao atualizar cotações.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const upsertProfile = useUpsert("profiles", "id");
   const upsertSettings = useUpsert("settings", "user_id");
@@ -207,6 +232,45 @@ function SettingsPage() {
             </Button>
           </div>
         </div>
+      </Panel>
+
+      <Panel className="space-y-4">
+        <SectionHeader
+          title="Moeda e câmbio"
+          description="A moeda de visualização só muda a exibição — os lançamentos permanecem na moeda original."
+          action={
+            <Button variant="outline" onClick={updateRates} disabled={busy || ratesLoading}>
+              Atualizar cotações
+            </Button>
+          }
+        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-2">
+            <Label>Moeda de visualização</Label>
+            <CurrencySelect className="h-10 w-full text-sm" />
+          </div>
+          <div className="grid gap-2">
+            <Label>Cotações conhecidas</Label>
+            <p className="text-sm text-muted-foreground">
+              {rates.length === 0
+                ? "Nenhuma cotação carregada ainda."
+                : `${rates.length} cotações · última em ${rates[rates.length - 1]?.effectiveOn}`}
+            </p>
+          </div>
+        </div>
+        <ul className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+          {[...rates]
+            .filter((r) => r.effectiveOn === rates[rates.length - 1]?.effectiveOn)
+            .map((r) => (
+              <li key={`${r.base}-${r.quote}-${r.effectiveOn}`}>
+                1 {r.base} = {formatNumber(r.rate, 4)} {r.quote}
+              </li>
+            ))}
+        </ul>
+        <AssumptionNote>
+          Conversões usam a cotação vigente na data do lançamento. Valores convertidos aparecem com “≈”.
+          Moeda atual: {displayCurrency}.
+        </AssumptionNote>
       </Panel>
 
       <Panel className="space-y-4">

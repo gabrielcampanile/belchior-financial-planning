@@ -1,5 +1,7 @@
 /** Tipos do domínio financeiro. Independentes de React e de persistência. */
 
+import type { CurrencyCode } from "./currency";
+
 export type TransactionType = "EXPENSE" | "INCOME" | "TRANSFER" | "INVESTMENT_CONTRIBUTION";
 export type MatchType = "CONTAINS" | "STARTS_WITH" | "EQUALS" | "REGEX";
 export type IncomeNature = "RECURRING" | "TEMPORARY" | "EXTRAORDINARY";
@@ -48,6 +50,7 @@ export interface CategorizationRule {
 }
 
 export interface Transaction {
+  currency: CurrencyCode;
   id: string;
   occurred_on: string;
   description: string;
@@ -63,6 +66,7 @@ export interface Transaction {
 }
 
 export interface IncomeEntry {
+  currency: CurrencyCode;
   id: string;
   month: string;
   name: string;
@@ -74,6 +78,7 @@ export interface IncomeEntry {
 }
 
 export interface Account {
+  currency: CurrencyCode;
   id: string;
   name: string;
   type: AccountType;
@@ -85,6 +90,7 @@ export interface Account {
 }
 
 export interface AccountBalance {
+  currency: CurrencyCode;
   id: string;
   account_id: string;
   month: string;

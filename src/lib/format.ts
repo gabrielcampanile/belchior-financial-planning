@@ -1,28 +1,50 @@
-/** Formatação pt-BR / BRL. Valores monetários são sempre inteiros em centavos. */
+/** Formatação pt-BR multimoeda. Valores monetários são sempre inteiros em centavos. */
 
-const brl = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-  minimumFractionDigits: 2,
-});
+import { DEFAULT_CURRENCY, type CurrencyCode, type Money } from "@/domain/currency";
 
-const brlCompact = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
+const LOCALE = "pt-BR";
 
-export function formatCents(cents: number): string {
-  return brl.format((cents ?? 0) / 100);
+const cache = new Map<string, Intl.NumberFormat>();
+
+function formatter(currency: CurrencyCode, compact: boolean): Intl.NumberFormat {
+  const key = `${currency}:${compact}`;
+  let f = cache.get(key);
+  if (!f) {
+    f = new Intl.NumberFormat(LOCALE, {
+      style: "currency",
+      currency,
+      minimumFractionDigits: compact ? 0 : 2,
+      maximumFractionDigits: compact ? 0 : 2,
+    });
+    cache.set(key, f);
+  }
+  return f;
 }
 
-export function formatCentsShort(cents: number): string {
-  return brlCompact.format((cents ?? 0) / 100);
+export function formatCents(cents: number, currency: CurrencyCode = DEFAULT_CURRENCY): string {
+  return formatter(currency, false).format((cents ?? 0) / 100);
 }
 
-export function formatSignedCents(cents: number): string {
-  const s = formatCents(Math.abs(cents));
+export function formatCentsShort(cents: number, currency: CurrencyCode = DEFAULT_CURRENCY): string {
+  return formatter(currency, true).format((cents ?? 0) / 100);
+}
+
+/** Formatação canônica de um valor de domínio. */
+export function formatMoney(value: Money): string {
+  return formatCents(value.amountCents, value.currency);
+}
+
+export function formatMoneyShort(value: Money): string {
+  return formatCentsShort(value.amountCents, value.currency);
+}
+
+/** Valor convertido, sempre marcado com "≈" para deixar claro que não é o original. */
+export function formatApprox(cents: number, currency: CurrencyCode): string {
+  return `≈ ${formatCents(cents, currency)}`;
+}
+
+export function formatSignedCents(cents: number, currency: CurrencyCode = DEFAULT_CURRENCY): string {
+  const s = formatCents(Math.abs(cents), currency);
   if (cents > 0) return `+${s}`;
   if (cents < 0) return `−${s}`;
   return s;
@@ -30,7 +52,7 @@ export function formatSignedCents(cents: number): string {
 
 export function formatPercent(ratio: number, digits = 1): string {
   if (!Number.isFinite(ratio)) return "—";
-  return `${(ratio * 100).toLocaleString("pt-BR", {
+  return `${(ratio * 100).toLocaleString(LOCALE, {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   })}%`;
@@ -38,7 +60,7 @@ export function formatPercent(ratio: number, digits = 1): string {
 
 export function formatNumber(value: number, digits = 1): string {
   if (!Number.isFinite(value)) return "—";
-  return value.toLocaleString("pt-BR", {
+  return value.toLocaleString(LOCALE, {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });
@@ -68,7 +90,7 @@ export function parseCurrencyToCents(input: string): number | null {
 
 export function centsToInput(cents: number | null | undefined): string {
   if (cents == null) return "";
-  return (cents / 100).toLocaleString("pt-BR", {
+  return (cents / 100).toLocaleString(LOCALE, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });

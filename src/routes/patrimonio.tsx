@@ -25,7 +25,10 @@ import {
   type AccountType,
 } from "@/domain/types";
 import { netWorthForMonth } from "@/domain/financialMetrics";
-import { centsToInput, formatCents, parseCurrencyToCents } from "@/lib/format";
+import { centsToInput, formatApprox, formatCents, parseCurrencyToCents } from "@/lib/format";
+import { useCurrency } from "@/hooks/useCurrency";
+import { CurrencyField } from "@/components/finance/CurrencySelect";
+import { DEFAULT_CURRENCY, money, toCurrencyCode, type CurrencyCode } from "@/domain/currency";
 import { currentMonthKey, monthLabel, shiftMonth } from "@/lib/months";
 
 export const Route = createFileRoute("/patrimonio")({
@@ -53,17 +56,23 @@ function PatrimonioPage() {
   const upsertAccount = useUpsert("accounts");
   const upsertBalance = useUpsert("account_balances", "user_id,account_id,month");
   const removeAccount = useDeleteRow("accounts");
+  const { convert, displayCurrency } = useCurrency();
 
-  const snapshot = netWorthForMonth(month, accounts, balances);
+  const snapshot = netWorthForMonth(month, accounts, balances, convert);
   const [form, setForm] = useState({
     name: "",
     type: "CHECKING" as AccountType,
     side: "ASSET" as AccountSide,
     liquid: true,
+    currency: DEFAULT_CURRENCY as CurrencyCode,
   });
 
   function balanceOf(accountId: string) {
     return balances.find((b) => b.account_id === accountId && b.month === month)?.balance_cents ?? 0;
+  }
+
+  function currencyOf(accountId: string): CurrencyCode {
+    return toCurrencyCode(accounts.find((a) => a.id === accountId)?.currency);
   }
 
   async function createAccount() {
@@ -76,6 +85,7 @@ function PatrimonioPage() {
       type: form.type,
       side: form.side,
       liquid: form.liquid,
+      currency: form.currency,
       sort_order: accounts.length,
     });
     toast.success("Conta criada.");
@@ -85,7 +95,12 @@ function PatrimonioPage() {
 
   async function saveBalance(accountId: string, raw: string) {
     const cents = parseCurrencyToCents(raw) ?? 0;
-    await upsertBalance.mutateAsync({ account_id: accountId, month, balance_cents: cents });
+    await upsertBalance.mutateAsync({
+      account_id: accountId,
+      month,
+      balance_cents: cents,
+      currency: currencyOf(accountId),
+    });
   }
 
   return (
@@ -134,6 +149,16 @@ function PatrimonioPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="grid gap-2">
+                  <Label>Moeda da conta</Label>
+                  <CurrencyField
+                    value={form.currency}
+                    onChange={(currency) => setForm({ ...form, currency })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    O saldo é sempre guardado na moeda original da conta.
+                  </p>
+                </div>
                 <div className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
                   <div>
                     <p className="text-sm">Ativo líquido</p>
@@ -156,9 +181,9 @@ function PatrimonioPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <MetricValue label="Patrimônio líquido" value={formatCents(snapshot.netWorth)} badge="REAL" tone="accent" />
-        <MetricValue label="Ativos" value={formatCents(snapshot.assets)} badge="REAL" tone="positive" />
-        <MetricValue label="Passivos" value={formatCents(snapshot.liabilities)} badge="REAL" tone="negative" />
+        <MetricValue label="Patrimônio líquido" value={formatCents(snapshot.netWorth, displayCurrency)} badge="REAL" tone="accent" />
+        <MetricValue label="Ativos" value={formatCents(snapshot.assets, displayCurrency)} badge="REAL" tone="positive" />
+        <MetricValue label="Passivos" value={formatCents(snapshot.liabilities, displayCurrency)} badge="REAL" tone="negative" />
       </div>
 
       <Panel className="space-y-4">
@@ -190,10 +215,19 @@ function PatrimonioPage() {
                   <p className="truncate text-sm text-foreground">{account.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {ACCOUNT_TYPE_LABEL[account.type]} · {account.side === "ASSET" ? "Ativo" : "Passivo"}
-                    {account.liquid ? " · líquido" : ""}
+                    {account.liquid ? " · líquido" : ""} · {toCurrencyCode(account.currency)}
                   </p>
+                  {toCurrencyCode(account.currency) !== displayCurrency ? (
+                    <p className="text-xs text-muted-foreground">
+                      {formatApprox(
+                        convert(money(balanceOf(account.id), toCurrencyCode(account.currency)), `${month}`),
+                        displayCurrency,
+                      )}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{toCurrencyCode(account.currency)}</span>
                   <Input
                     className="h-9 w-36 text-right tabular-nums"
                     defaultValue={centsToInput(balanceOf(account.id))}

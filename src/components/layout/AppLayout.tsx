@@ -18,6 +18,7 @@ import { useSession } from "@/hooks/useSession";
 import { useProfile } from "@/hooks/useFinanceData";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { CurrencySelect } from "@/components/finance/CurrencySelect";
 
 const NAV = [
   { to: "/", label: "Visão geral", icon: LayoutDashboard },
@@ -88,6 +89,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <Menu className="h-5 w-5" />
         </Button>
         <BrandMark compact />
+        <div className="ml-auto">
+          <CurrencySelect />
+        </div>
       </header>
 
       {mobileOpen ? (
@@ -103,7 +107,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
       ) : null}
 
-      <main className="px-4 pb-28 pt-6 sm:px-6 lg:ml-60 lg:px-10 lg:pb-14">
+      <div className="hidden lg:flex lg:ml-60 lg:justify-end lg:px-10 lg:pt-6">
+        <CurrencySelect />
+      </div>
+
+      <main className="px-4 pb-28 pt-6 sm:px-6 lg:ml-60 lg:px-10 lg:pb-14 lg:pt-4">
         <div className="mx-auto w-full max-w-6xl space-y-8">{children}</div>
       </main>
 
