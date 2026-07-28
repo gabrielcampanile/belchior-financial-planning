@@ -326,6 +326,15 @@ function PlanejamentoPage() {
               month={month}
               displayCurrency={displayCurrency}
               onDelete={(id) => removeIncomePlan.mutateAsync(id)}
+              renderEdit={(plan) => (
+                <PlanDialog
+                  kind="income"
+                  scenarioId={scenario.id}
+                  categories={[]}
+                  plan={plan}
+                  onSubmit={(values) => updateIncomePlan.mutateAsync({ id: plan.id, values })}
+                />
+              )}
               describe={(p) =>
                 `${INCOME_TYPE_LABEL[(p as IncomePlan).type]} · ${INCOME_NATURE_LABEL[(p as IncomePlan).nature]}`
               }
@@ -352,10 +361,20 @@ function PlanejamentoPage() {
               month={month}
               displayCurrency={displayCurrency}
               onDelete={(id) => removeExpensePlan.mutateAsync(id)}
+              renderEdit={(plan) => (
+                <PlanDialog
+                  kind="expense"
+                  scenarioId={scenario.id}
+                  categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+                  plan={plan}
+                  onSubmit={(values) => updateExpensePlan.mutateAsync({ id: plan.id, values })}
+                />
+              )}
               describe={(p) => ((p as ExpensePlan).essential ? "Essencial" : "Discricionária")}
             />
           </Panel>
         </TabsContent>
+
       </Tabs>
     </AppLayout>
   );
