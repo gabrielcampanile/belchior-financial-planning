@@ -55,6 +55,26 @@ export const Route = createFileRoute("/fechamentos")({
   component: ClosuresPage,
 });
 
+const MAX_OCCURRENCES = 60;
+
+const FREQUENCY_STEP = {
+  MONTHLY: 1,
+  BIMONTHLY: 2,
+  QUARTERLY: 3,
+  SEMIANNUAL: 6,
+  ANNUAL: 12,
+} as const;
+
+type FrequencyKey = keyof typeof FREQUENCY_STEP;
+
+const FREQUENCY_LABEL: Record<FrequencyKey, string> = {
+  MONTHLY: "Mensal",
+  BIMONTHLY: "Bimestral",
+  QUARTERLY: "Trimestral",
+  SEMIANNUAL: "Semestral",
+  ANNUAL: "Anual",
+};
+
 function ClosuresPage() {
   const [month, setMonth] = useState(currentMonthKey());
   const [open, setOpen] = useState(false);
@@ -89,6 +109,8 @@ function ClosuresPage() {
     type: "SALARY" as IncomeType,
     nature: "RECURRING" as IncomeNature,
     currency: DEFAULT_CURRENCY as CurrencyCode,
+    frequency: "MONTHLY" as FrequencyKey,
+    occurrences: "12",
   });
 
   async function addIncome() {
@@ -97,17 +119,30 @@ function ClosuresPage() {
       toast.error("Informe nome e valor da receita.");
       return;
     }
-    await upsertIncome.mutateAsync({
-      month,
+
+    const step = form.nature === "EXTRAORDINARY" ? 1 : FREQUENCY_STEP[form.frequency];
+    const count =
+      form.nature === "EXTRAORDINARY"
+        ? 1
+        : Math.min(Math.max(Number(form.occurrences) || 1, 1), MAX_OCCURRENCES);
+
+    const rows = Array.from({ length: count }, (_, i) => ({
+      month: shiftMonth(month, i * step),
       name: form.name.trim(),
       type: form.type,
       nature: form.nature,
       amount_cents: Math.abs(cents),
       currency: form.currency,
-    });
-    toast.success("Receita registrada.");
-    setOpen(false);
-    setForm({ ...form, name: "", amount: "" });
+    }));
+
+    try {
+      await upsertIncome.mutateAsync(rows);
+      toast.success(count > 1 ? `Receita registrada em ${count} meses.` : "Receita registrada.");
+      setOpen(false);
+      setForm({ ...form, name: "", amount: "" });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar a receita.");
+    }
   }
 
   async function toggleClosure() {
@@ -239,6 +274,41 @@ function ClosuresPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  {form.nature !== "EXTRAORDINARY" ? (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid gap-2">
+                        <Label>Frequência</Label>
+                        <Select
+                          value={form.frequency}
+                          onValueChange={(v) => setForm({ ...form, frequency: v as FrequencyKey })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(Object.keys(FREQUENCY_LABEL) as FrequencyKey[]).map((f) => (
+                              <SelectItem key={f} value={f}>
+                                {FREQUENCY_LABEL[f]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Ocorrências</Label>
+                        <Input
+                          inputMode="numeric"
+                          value={form.occurrences}
+                          onChange={(e) => setForm({ ...form, occurrences: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+                  <p className="text-xs text-muted-foreground">
+                    {form.nature === "EXTRAORDINARY"
+                      ? "Receita única, lançada apenas neste mês."
+                      : `Será lançada a partir de ${monthLabel(month)}, no máximo ${MAX_OCCURRENCES} meses à frente.`}
+                  </p>
                 </div>
                 <DialogFooter>
                   <Button onClick={addIncome} disabled={upsertIncome.isPending}>
