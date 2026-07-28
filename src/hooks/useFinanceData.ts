@@ -161,7 +161,7 @@ export function useUpsert(table: TableName, onConflict?: string) {
       const list = (Array.isArray(rows) ? rows : [rows]).map((row) =>
         table === "profiles" ? { ...row, id: userId } : { ...row, user_id: userId },
       );
-      const { error } = await supabase
+      const { error } = await db
         .from(table)
         .upsert(list, onConflict ? { onConflict } : undefined);
       if (error) throw new Error(error.message);
@@ -174,7 +174,7 @@ export function useUpdateRow(table: TableName) {
   const invalidate = useInvalidateFinance();
   return useMutation({
     mutationFn: async ({ id, values }: { id: string; values: Record<string, unknown> }) => {
-      const { error } = await supabase.from(table).update(values).eq("id", id);
+      const { error } = await db.from(table).update(values).eq("id", id);
       if (error) throw new Error(error.message);
     },
     onSuccess: invalidate,
@@ -185,7 +185,7 @@ export function useDeleteRow(table: TableName) {
   const invalidate = useInvalidateFinance();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from(table).delete().eq("id", id);
+      const { error } = await db.from(table).delete().eq("id", id);
       if (error) throw new Error(error.message);
     },
     onSuccess: invalidate,
