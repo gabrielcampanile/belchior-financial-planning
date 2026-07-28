@@ -6,6 +6,8 @@ import type {
   IncomeEntry,
   Transaction,
 } from "./types";
+import { money } from "./currency";
+import { identityConverter, type MoneyConverter } from "./exchange";
 
 /**
  * Métricas financeiras determinísticas sobre DADOS REAIS.
@@ -25,6 +27,7 @@ export function netWorthForMonth(
   month: string,
   accounts: Account[],
   balances: AccountBalance[],
+  convert: MoneyConverter = identityConverter,
 ): NetWorthSnapshot {
   let assets = 0;
   let liabilities = 0;
@@ -37,7 +40,7 @@ export function netWorthForMonth(
       .sort((a, b) => a.month.localeCompare(b.month));
     const last = known[known.length - 1];
     if (!last) continue;
-    const value = Math.abs(last.balance_cents);
+    const value = Math.abs(convert(money(last.balance_cents, last.currency), last.month));
     if (account.side === "ASSET") {
       assets += value;
       if (account.liquid) liquid += value;
@@ -53,8 +56,9 @@ export function netWorthSeries(
   months: string[],
   accounts: Account[],
   balances: AccountBalance[],
+  convert: MoneyConverter = identityConverter,
 ): NetWorthSnapshot[] {
-  return months.map((m) => netWorthForMonth(m, accounts, balances));
+  return months.map((m) => netWorthForMonth(m, accounts, balances, convert));
 }
 
 function essentialCategoryIds(categories: Category[]): Set<string> {
@@ -75,6 +79,7 @@ export interface ExpenseBreakdown {
 export function expenseBreakdown(
   transactions: Transaction[],
   categories: Category[],
+  convert: MoneyConverter = identityConverter,
 ): ExpenseBreakdown {
   const essentials = essentialCategoryIds(categories);
   const nameById = new Map(categories.map((c) => [c.id, c.name] as const));
@@ -85,7 +90,7 @@ export function expenseBreakdown(
 
   for (const tx of transactions) {
     if (tx.type !== "EXPENSE") continue;
-    const value = Math.abs(tx.amount_cents);
+    const value = Math.abs(convert(money(tx.amount_cents, tx.currency), tx.occurred_on));
     total += value;
     if (tx.category_id && essentials.has(tx.category_id)) essential += value;
     const rootId = tx.category_id ? (parentById.get(tx.category_id) ?? tx.category_id) : "__none__";
@@ -104,10 +109,13 @@ export function expenseBreakdown(
 }
 
 /** Aportes do mês (investimento não é despesa). */
-export function investmentTotal(transactions: Transaction[]): number {
+export function investmentTotal(
+  transactions: Transaction[],
+  convert: MoneyConverter = identityConverter,
+): number {
   return transactions
     .filter((t) => t.type === "INVESTMENT_CONTRIBUTION")
-    .reduce((sum, t) => sum + Math.abs(t.amount_cents), 0);
+    .reduce((sum, t) => sum + Math.abs(convert(money(t.amount_cents, t.currency), t.occurred_on)), 0);
 }
 
 export interface IncomeBreakdown {
@@ -117,15 +125,24 @@ export interface IncomeBreakdown {
   total: number;
 }
 
-export function incomeBreakdown(entries: IncomeEntry[]): IncomeBreakdown {
-  const recurring = sumBy(entries, "RECURRING");
-  const temporary = sumBy(entries, "TEMPORARY");
-  const extraordinary = sumBy(entries, "EXTRAORDINARY");
+export function incomeBreakdown(
+  entries: IncomeEntry[],
+  convert: MoneyConverter = identityConverter,
+): IncomeBreakdown {
+  const recurring = sumBy(entries, "RECURRING", convert);
+  const temporary = sumBy(entries, "TEMPORARY", convert);
+  const extraordinary = sumBy(entries, "EXTRAORDINARY", convert);
   return { recurring, temporary, extraordinary, total: recurring + temporary + extraordinary };
 }
 
-function sumBy(entries: IncomeEntry[], nature: IncomeEntry["nature"]): number {
-  return entries.filter((e) => e.nature === nature).reduce((s, e) => s + e.amount_cents, 0);
+function sumBy(
+  entries: IncomeEntry[],
+  nature: IncomeEntry["nature"],
+  convert: MoneyConverter,
+): number {
+  return entries
+    .filter((e) => e.nature === nature)
+    .reduce((s, e) => s + convert(money(e.amount_cents, e.currency), e.month), 0);
 }
 
 /** (receita total − despesa total) / receita total */
@@ -177,10 +194,11 @@ export function monthMetrics(
   transactions: Transaction[],
   incomes: IncomeEntry[],
   categories: Category[],
+  convert: MoneyConverter = identityConverter,
 ): MonthMetrics {
-  const income = incomeBreakdown(incomes);
-  const expenses = expenseBreakdown(transactions, categories);
-  const investments = investmentTotal(transactions);
+  const income = incomeBreakdown(incomes, convert);
+  const expenses = expenseBreakdown(transactions, categories, convert);
+  const investments = investmentTotal(transactions, convert);
   return {
     month,
     income,
