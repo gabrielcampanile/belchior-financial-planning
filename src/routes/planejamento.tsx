@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Area,
@@ -65,7 +65,9 @@ import {
   useIncomePlans,
   usePlanningDelete,
   usePlanningInsert,
+  usePlanningUpdate,
   useScenarios,
+
 } from "@/hooks/usePlanning";
 import { useCurrency } from "@/hooks/useCurrency";
 import { formatCents, formatPercent, formatSignedCents, parseCurrencyToCents } from "@/lib/format";
@@ -118,8 +120,11 @@ function PlanejamentoPage() {
 
   const addIncomePlan = usePlanningInsert("income_plans");
   const addExpensePlan = usePlanningInsert("expense_plans");
+  const updateIncomePlan = usePlanningUpdate("income_plans");
+  const updateExpensePlan = usePlanningUpdate("expense_plans");
   const removeIncomePlan = usePlanningDelete("income_plans");
   const removeExpensePlan = usePlanningDelete("expense_plans");
+
 
   const startingNetWorth = netWorthForMonth(month, accounts, balances, convert).netWorth;
 
@@ -326,6 +331,15 @@ function PlanejamentoPage() {
               month={month}
               displayCurrency={displayCurrency}
               onDelete={(id) => removeIncomePlan.mutateAsync(id)}
+              renderEdit={(plan) => (
+                <PlanDialog
+                  kind="income"
+                  scenarioId={scenario.id}
+                  categories={[]}
+                  plan={plan}
+                  onSubmit={(values) => updateIncomePlan.mutateAsync({ id: plan.id, values })}
+                />
+              )}
               describe={(p) =>
                 `${INCOME_TYPE_LABEL[(p as IncomePlan).type]} · ${INCOME_NATURE_LABEL[(p as IncomePlan).nature]}`
               }
@@ -352,10 +366,20 @@ function PlanejamentoPage() {
               month={month}
               displayCurrency={displayCurrency}
               onDelete={(id) => removeExpensePlan.mutateAsync(id)}
+              renderEdit={(plan) => (
+                <PlanDialog
+                  kind="expense"
+                  scenarioId={scenario.id}
+                  categories={categories.map((c) => ({ id: c.id, name: c.name }))}
+                  plan={plan}
+                  onSubmit={(values) => updateExpensePlan.mutateAsync({ id: plan.id, values })}
+                />
+              )}
               describe={(p) => ((p as ExpensePlan).essential ? "Essencial" : "Discricionária")}
             />
           </Panel>
         </TabsContent>
+
       </Tabs>
     </AppLayout>
   );
@@ -366,12 +390,14 @@ function PlanList({
   month,
   displayCurrency,
   onDelete,
+  renderEdit,
   describe,
 }: {
   plans: Array<IncomePlan | ExpensePlan>;
   month: string;
   displayCurrency: CurrencyCode;
   onDelete: (id: string) => Promise<unknown>;
+  renderEdit?: (plan: IncomePlan | ExpensePlan) => React.ReactNode;
   describe: (plan: IncomePlan | ExpensePlan) => string;
 }) {
   if (plans.length === 0) {
@@ -386,20 +412,23 @@ function PlanList({
       {plans.map((plan) => (
         <li
           key={plan.id}
-          className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface/40 px-4 py-3"
+          className={`flex items-center justify-between gap-3 rounded-xl border border-border bg-surface/40 px-4 py-3 ${
+            plan.enabled ? "" : "opacity-60"
+          }`}
         >
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-foreground">{plan.name}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               {describe(plan)} · {FREQUENCY_LABEL[plan.frequency]}
               {plan.annual_adjustment_percent ? ` · +${plan.annual_adjustment_percent}% a.a.` : ""}
-              {occursInMonth(plan, month) ? " · ocorre neste mês" : ""}
+              {plan.enabled ? (occursInMonth(plan, month) ? " · ocorre neste mês" : "") : " · desativado"}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm tabular-nums text-foreground">
+          <div className="flex items-center gap-1">
+            <span className="mr-1 text-sm tabular-nums text-foreground">
               {formatCents(amountForMonth(plan, month), plan.currency)}
             </span>
+            {renderEdit?.(plan)}
             <Button size="sm" variant="ghost" className="text-negative" onClick={() => void onDelete(plan.id)}>
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -414,27 +443,22 @@ function PlanDialog({
   kind,
   scenarioId,
   categories,
+  plan,
   onSubmit,
 }: {
   kind: "income" | "expense";
   scenarioId: string;
   categories: Array<{ id: string; name: string }>;
+  plan?: IncomePlan | ExpensePlan;
   onSubmit: (values: Record<string, unknown>) => Promise<unknown>;
 }) {
+  const isEdit = Boolean(plan);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    amount: "",
-    currency: DEFAULT_CURRENCY as CurrencyCode,
-    frequency: "MONTHLY" as PlanFrequency,
-    startDate: currentMonthKey(),
-    endDate: "",
-    adjustment: "0",
-    type: "SALARY" as IncomeType,
-    nature: "RECURRING" as IncomeNature,
-    essential: true,
-    categoryId: "",
-  });
+  const [form, setForm] = useState(() => planToForm(kind, plan));
+
+  function reset() {
+    setForm(planToForm(kind, plan));
+  }
 
   async function submit() {
     const cents = parseCurrencyToCents(form.amount);
@@ -452,7 +476,7 @@ function PlanDialog({
       start_date: form.startDate,
       end_date: form.endDate || null,
       annual_adjustment_percent: Number(form.adjustment.replace(",", ".")) || 0,
-      enabled: true,
+      enabled: form.enabled,
     };
     try {
       await onSubmit(
@@ -460,24 +484,44 @@ function PlanDialog({
           ? { ...base, type: form.type, nature: form.nature }
           : { ...base, essential: form.essential, category_id: form.categoryId || null },
       );
-      toast.success("Plano adicionado.");
+      toast.success(isEdit ? "Plano atualizado." : "Plano adicionado.");
       setOpen(false);
-      setForm({ ...form, name: "", amount: "" });
+      if (!isEdit) setForm({ ...form, name: "", amount: "" });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível salvar o plano.");
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o);
+        if (o && isEdit) reset();
+      }}
+    >
       <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus className="mr-1.5 h-4 w-4" /> Novo plano
-        </Button>
+        {isEdit ? (
+          <Button size="sm" variant="ghost" aria-label={`Editar ${plan?.name}`}>
+            <Pencil className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button size="sm">
+            <Plus className="mr-1.5 h-4 w-4" /> Novo plano
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{kind === "income" ? "Nova receita planejada" : "Nova despesa planejada"}</DialogTitle>
+          <DialogTitle>
+            {isEdit
+              ? kind === "income"
+                ? "Editar receita planejada"
+                : "Editar despesa planejada"
+              : kind === "income"
+                ? "Nova receita planejada"
+                : "Nova despesa planejada"}
+          </DialogTitle>
         </DialogHeader>
         <div className="grid gap-4">
           <div className="grid gap-2">
@@ -615,11 +659,42 @@ function PlanDialog({
               </div>
             </div>
           )}
+
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-border px-4 py-3">
+            <Label htmlFor="plan-enabled" className="text-sm">
+              Ativo na projeção
+            </Label>
+            <Switch
+              id="plan-enabled"
+              checked={form.enabled}
+              onCheckedChange={(v) => setForm({ ...form, enabled: v })}
+            />
+          </div>
         </div>
         <DialogFooter>
-          <Button onClick={submit}>Salvar plano</Button>
+          <Button onClick={submit}>{isEdit ? "Salvar alterações" : "Salvar plano"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
+function planToForm(kind: "income" | "expense", plan?: IncomePlan | ExpensePlan) {
+  const income = plan as IncomePlan | undefined;
+  const expense = plan as ExpensePlan | undefined;
+  return {
+    name: plan?.name ?? "",
+    amount: plan ? (plan.amount_cents / 100).toFixed(2) : "",
+    currency: (plan?.currency ?? DEFAULT_CURRENCY) as CurrencyCode,
+    frequency: (plan?.frequency ?? "MONTHLY") as PlanFrequency,
+    startDate: plan?.start_date ?? currentMonthKey(),
+    endDate: plan?.end_date ?? "",
+    adjustment: String(plan?.annual_adjustment_percent ?? 0),
+    type: (kind === "income" ? (income?.type ?? "SALARY") : "SALARY") as IncomeType,
+    nature: (kind === "income" ? (income?.nature ?? "RECURRING") : "RECURRING") as IncomeNature,
+    essential: kind === "expense" ? (expense?.essential ?? true) : true,
+    categoryId: kind === "expense" ? (expense?.category_id ?? "") : "",
+    enabled: plan?.enabled ?? true,
+  };
+}
+
