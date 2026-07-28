@@ -30,7 +30,7 @@ export const refreshExchangeRates = createServerFn({ method: "POST" })
 
     const rows = CURRENCY_CODES.filter((code) => code !== "BRL" && Number.isFinite(rates[code])).map(
       (code) => ({
-        base_currency: "BRL",
+        base_currency: "BRL" as const,
         quote_currency: code,
         rate: rates[code],
         effective_on: today,
