@@ -65,7 +65,9 @@ import {
   useIncomePlans,
   usePlanningDelete,
   usePlanningInsert,
+  usePlanningUpdate,
   useScenarios,
+
 } from "@/hooks/usePlanning";
 import { useCurrency } from "@/hooks/useCurrency";
 import { formatCents, formatPercent, formatSignedCents, parseCurrencyToCents } from "@/lib/format";
