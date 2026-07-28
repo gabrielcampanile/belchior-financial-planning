@@ -10,12 +10,24 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TransacoesRouteImport } from './routes/transacoes'
+import { Route as PatrimonioRouteImport } from './routes/patrimonio'
+import { Route as FechamentosRouteImport } from './routes/fechamentos'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 
 const TransacoesRoute = TransacoesRouteImport.update({
   id: '/transacoes',
   path: '/transacoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PatrimonioRoute = PatrimonioRouteImport.update({
+  id: '/patrimonio',
+  path: '/patrimonio',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FechamentosRoute = FechamentosRouteImport.update({
+  id: '/fechamentos',
+  path: '/fechamentos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -32,30 +44,44 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/fechamentos': typeof FechamentosRoute
+  '/patrimonio': typeof PatrimonioRoute
   '/transacoes': typeof TransacoesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/fechamentos': typeof FechamentosRoute
+  '/patrimonio': typeof PatrimonioRoute
   '/transacoes': typeof TransacoesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/fechamentos': typeof FechamentosRoute
+  '/patrimonio': typeof PatrimonioRoute
   '/transacoes': typeof TransacoesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/transacoes'
+  fullPaths: '/' | '/auth' | '/fechamentos' | '/patrimonio' | '/transacoes'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/transacoes'
-  id: '__root__' | '/' | '/auth' | '/transacoes'
+  to: '/' | '/auth' | '/fechamentos' | '/patrimonio' | '/transacoes'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/fechamentos'
+    | '/patrimonio'
+    | '/transacoes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  FechamentosRoute: typeof FechamentosRoute
+  PatrimonioRoute: typeof PatrimonioRoute
   TransacoesRoute: typeof TransacoesRoute
 }
 
@@ -66,6 +92,20 @@ declare module '@tanstack/react-router' {
       path: '/transacoes'
       fullPath: '/transacoes'
       preLoaderRoute: typeof TransacoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/patrimonio': {
+      id: '/patrimonio'
+      path: '/patrimonio'
+      fullPath: '/patrimonio'
+      preLoaderRoute: typeof PatrimonioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fechamentos': {
+      id: '/fechamentos'
+      path: '/fechamentos'
+      fullPath: '/fechamentos'
+      preLoaderRoute: typeof FechamentosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -88,6 +128,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  FechamentosRoute: FechamentosRoute,
+  PatrimonioRoute: PatrimonioRoute,
   TransacoesRoute: TransacoesRoute,
 }
 export const routeTree = rootRouteImport
