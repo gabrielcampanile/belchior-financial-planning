@@ -95,13 +95,21 @@ function PatrimonioPage() {
 
   async function saveBalance(accountId: string, raw: string) {
     const cents = parseCurrencyToCents(raw) ?? 0;
-    await upsertBalance.mutateAsync({
-      account_id: accountId,
-      month,
-      balance_cents: cents,
-      currency: currencyOf(accountId),
-    });
+    const current = balanceOf(accountId);
+    if (cents === current) return;
+    try {
+      await upsertBalance.mutateAsync({
+        account_id: accountId,
+        month,
+        balance_cents: cents,
+        currency: currencyOf(accountId),
+      });
+      toast.success("Saldo salvo.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar o saldo.");
+    }
   }
+
 
   return (
     <AppLayout>
