@@ -102,12 +102,15 @@ function ImportPage() {
       toast.error("Nenhuma transação nova para importar.");
       return;
     }
-    await upsert.mutateAsync(
-      newRows.map(({ duplicate: _duplicate, ...row }) => row),
-    );
-    toast.success(`${newRows.length} transações importadas.`);
-    navigate({ to: "/transacoes" });
+    try {
+      await upsert.mutateAsync(newRows.map(({ duplicate: _duplicate, ...row }) => row));
+      toast.success(`${newRows.length} transações importadas.`);
+      navigate({ to: "/transacoes" });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Falha ao importar o arquivo.");
+    }
   }
+
 
   return (
     <AppLayout>

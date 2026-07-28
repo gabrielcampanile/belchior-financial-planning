@@ -153,6 +153,22 @@ type TableName =
   | "income_entries"
   | "closures";
 
+const UPSERT_CHUNK = 400;
+
+/** Remove duplicatas dentro do mesmo lote (Postgres recusa 2 linhas com a mesma chave de conflito). */
+function dedupeByConflict(
+  rows: Record<string, unknown>[],
+  onConflict?: string,
+): Record<string, unknown>[] {
+  if (!onConflict) return rows;
+  const keys = onConflict.split(",").map((k) => k.trim());
+  const seen = new Map<string, Record<string, unknown>>();
+  for (const row of rows) {
+    seen.set(keys.map((k) => String(row[k] ?? "")).join("|"), row);
+  }
+  return [...seen.values()];
+}
+
 export function useUpsert(table: TableName, onConflict?: string) {
   const invalidate = useInvalidateFinance();
   return useMutation({
@@ -163,14 +179,18 @@ export function useUpsert(table: TableName, onConflict?: string) {
       const list = (Array.isArray(rows) ? rows : [rows]).map((row) =>
         table === "profiles" ? { ...row, id: userId } : { ...row, user_id: userId },
       );
-      const { error } = await db
-        .from(table)
-        .upsert(list, onConflict ? { onConflict } : undefined);
-      if (error) throw new Error(error.message);
+      const unique = dedupeByConflict(list, onConflict);
+      for (let i = 0; i < unique.length; i += UPSERT_CHUNK) {
+        const { error } = await db
+          .from(table)
+          .upsert(unique.slice(i, i + UPSERT_CHUNK), onConflict ? { onConflict } : undefined);
+        if (error) throw new Error(error.message);
+      }
     },
     onSuccess: invalidate,
   });
 }
+
 
 export function useUpdateRow(table: TableName) {
   const invalidate = useInvalidateFinance();

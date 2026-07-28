@@ -95,13 +95,21 @@ function PatrimonioPage() {
 
   async function saveBalance(accountId: string, raw: string) {
     const cents = parseCurrencyToCents(raw) ?? 0;
-    await upsertBalance.mutateAsync({
-      account_id: accountId,
-      month,
-      balance_cents: cents,
-      currency: currencyOf(accountId),
-    });
+    const current = balanceOf(accountId);
+    if (cents === current) return;
+    try {
+      await upsertBalance.mutateAsync({
+        account_id: accountId,
+        month,
+        balance_cents: cents,
+        currency: currencyOf(accountId),
+      });
+      toast.success("Saldo salvo.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar o saldo.");
+    }
   }
+
 
   return (
     <AppLayout>
@@ -228,21 +236,52 @@ function PatrimonioPage() {
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="text-xs text-muted-foreground">{toCurrencyCode(account.currency)}</span>
-                  <Input
-                    className="h-9 w-36 text-right tabular-nums"
-                    defaultValue={centsToInput(balanceOf(account.id))}
+                  <BalanceInput
                     key={`${account.id}-${month}`}
-                    onBlur={(e) => saveBalance(account.id, e.target.value)}
+                    initial={centsToInput(balanceOf(account.id))}
+                    pending={upsertBalance.isPending}
+                    onSave={(value) => saveBalance(account.id, value)}
                   />
                   <Button variant="ghost" size="sm" onClick={() => removeAccount.mutate(account.id)}>
                     Excluir
                   </Button>
                 </div>
+
               </li>
             ))}
           </ul>
         )}
       </Panel>
     </AppLayout>
+  );
+}
+
+function BalanceInput({
+  initial,
+  pending,
+  onSave,
+}: {
+  initial: string;
+  pending: boolean;
+  onSave: (value: string) => void | Promise<void>;
+}) {
+  const [value, setValue] = useState(initial);
+  const dirty = value !== initial;
+
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        className="h-9 w-36 text-right tabular-nums"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={() => dirty && void onSave(value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void onSave(value);
+        }}
+      />
+      <Button size="sm" variant={dirty ? "default" : "outline"} disabled={!dirty || pending} onClick={() => void onSave(value)}>
+        Salvar
+      </Button>
+    </div>
   );
 }

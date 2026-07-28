@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useInvalidateFinance, useUpsert } from "@/hooks/useFinanceData";
@@ -36,6 +37,7 @@ const STEPS = [
 
 function OnboardingPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const invalidate = useInvalidateFinance();
   const [step, setStep] = useState(0);
   const [values, setValues] = useState<Record<string, string>>({});
@@ -43,8 +45,9 @@ function OnboardingPage() {
 
   const upsertProfile = useUpsert("profiles", "id");
   const upsertSettings = useUpsert("settings", "user_id");
-  const upsertAccount = useUpsert("accounts");
+  const upsertBalance = useUpsert("account_balances", "user_id,account_id,month");
   const upsertIncome = useUpsert("income_entries");
+
 
   const current = STEPS[step];
 
@@ -65,14 +68,28 @@ function OnboardingPage() {
 
         const netWorth = parseCurrencyToCents(values.netWorth ?? "");
         if (netWorth && netWorth > 0) {
-          await upsertAccount.mutateAsync({
-            name: "Patrimônio inicial",
-            type: "INVESTMENT",
-            side: "ASSET",
-            liquid: true,
-            sort_order: 0,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const db = supabase as any;
+          const { data: account, error } = await db
+            .from("accounts")
+            .insert({
+              user_id: auth.user.id,
+              name: "Patrimônio inicial",
+              type: "INVESTMENT",
+              side: "ASSET",
+              liquid: true,
+              sort_order: 0,
+            })
+            .select("id")
+            .single();
+          if (error) throw new Error(error.message);
+          await upsertBalance.mutateAsync({
+            account_id: (account as { id: string }).id,
+            month: currentMonthKey(),
+            balance_cents: netWorth,
           });
         }
+
 
         const income = parseCurrencyToCents(values.income ?? "");
         if (income && income > 0) {
@@ -87,8 +104,11 @@ function OnboardingPage() {
       }
 
       invalidate();
+      // garante que o perfil já esteja atualizado antes de sair do onboarding
+      await queryClient.refetchQueries({ queryKey: ["profile"] });
       toast.success("Tudo pronto.");
       navigate({ to: "/", replace: true });
+
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível concluir.");
     } finally {
