@@ -26,10 +26,15 @@ export interface Settings {
   surplus_invest_percent: number;
 }
 
-function unwrap<T>(result: { data: T | null; error: { message: string } | null }): T {
+function unwrap<T>(result: { data: unknown; error: { message: string } | null }): T {
   if (result.error) throw new Error(result.error.message);
   return (result.data ?? []) as T;
 }
+
+/** Cliente sem tipagem estrita para escritas genéricas por nome de tabela. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const db = supabase as any;
+
 
 export function useProfile() {
   return useQuery({
