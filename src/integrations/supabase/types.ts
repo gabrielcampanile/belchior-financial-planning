@@ -278,6 +278,84 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_plans: {
+        Row: {
+          amount_cents: number
+          annual_adjustment_percent: number
+          category_id: string | null
+          created_at: string
+          currency: Database["public"]["Enums"]["currency_code"]
+          enabled: boolean
+          end_date: string | null
+          essential: boolean
+          frequency: string
+          id: string
+          is_demo: boolean
+          months_of_year: number[]
+          name: string
+          notes: string | null
+          scenario_id: string
+          start_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_cents?: number
+          annual_adjustment_percent?: number
+          category_id?: string | null
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
+          enabled?: boolean
+          end_date?: string | null
+          essential?: boolean
+          frequency?: string
+          id?: string
+          is_demo?: boolean
+          months_of_year?: number[]
+          name: string
+          notes?: string | null
+          scenario_id: string
+          start_date?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          annual_adjustment_percent?: number
+          category_id?: string | null
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
+          enabled?: boolean
+          end_date?: string | null
+          essential?: boolean
+          frequency?: string
+          id?: string
+          is_demo?: boolean
+          months_of_year?: number[]
+          name?: string
+          notes?: string | null
+          scenario_id?: string
+          start_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_plans_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_plans_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_profiles: {
         Row: {
           config: Json
@@ -350,6 +428,77 @@ export type Database = {
         }
         Relationships: []
       }
+      income_plans: {
+        Row: {
+          amount_cents: number
+          annual_adjustment_percent: number
+          created_at: string
+          currency: Database["public"]["Enums"]["currency_code"]
+          enabled: boolean
+          end_date: string | null
+          frequency: string
+          id: string
+          is_demo: boolean
+          months_of_year: number[]
+          name: string
+          nature: string
+          notes: string | null
+          scenario_id: string
+          start_date: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_cents?: number
+          annual_adjustment_percent?: number
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
+          enabled?: boolean
+          end_date?: string | null
+          frequency?: string
+          id?: string
+          is_demo?: boolean
+          months_of_year?: number[]
+          name: string
+          nature?: string
+          notes?: string | null
+          scenario_id: string
+          start_date?: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          annual_adjustment_percent?: number
+          created_at?: string
+          currency?: Database["public"]["Enums"]["currency_code"]
+          enabled?: boolean
+          end_date?: string | null
+          frequency?: string
+          id?: string
+          is_demo?: boolean
+          months_of_year?: number[]
+          name?: string
+          nature?: string
+          notes?: string | null
+          scenario_id?: string
+          start_date?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "income_plans_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -383,6 +532,51 @@ export type Database = {
           onboarded?: boolean
           theme?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      scenarios: {
+        Row: {
+          base_currency: Database["public"]["Enums"]["currency_code"]
+          created_at: string
+          description: string | null
+          expected_monthly_return: number
+          horizon_months: number
+          id: string
+          is_default: boolean
+          is_demo: boolean
+          name: string
+          start_month: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          base_currency?: Database["public"]["Enums"]["currency_code"]
+          created_at?: string
+          description?: string | null
+          expected_monthly_return?: number
+          horizon_months?: number
+          id?: string
+          is_default?: boolean
+          is_demo?: boolean
+          name: string
+          start_month?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          base_currency?: Database["public"]["Enums"]["currency_code"]
+          created_at?: string
+          description?: string | null
+          expected_monthly_return?: number
+          horizon_months?: number
+          id?: string
+          is_default?: boolean
+          is_demo?: boolean
+          name?: string
+          start_month?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -497,6 +691,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      duplicate_scenario: {
+        Args: { _name: string; _scenario_id: string }
+        Returns: string
+      }
       seed_defaults: { Args: { _uid: string }; Returns: undefined }
     }
     Enums: {

@@ -1,57 +1,39 @@
-# Fase 1.1 — Multi-Currency Foundation
+## Fase 2 — Planejamento
 
-Objetivo: tornar o domínio financeiro currency-aware sem mudar o visual do produto, sem tocar na Fase 2 e sem alterar nenhum dado existente.
+Objetivo: responder "como será minha vida financeira nos próximos meses?" com números determinísticos, separando sempre REAL / PLANEJADO / PROJETADO.
 
-## 1. Banco de dados (uma migration)
+### 1. Banco de dados (uma migração)
 
-Moedas suportadas: BRL (default), CAD, USD, EUR, ARS.
+- `scenarios`: nome, descrição, `is_default`, `base_currency`, `start_month`, `horizon_months` (padrão 60), `expected_monthly_return` (herda de settings), `is_demo`.
+- `income_plans`: `scenario_id`, nome, `type` (SALARY, VR, BENEFIT, SCHOLARSHIP, BONUS, PLR, FREELANCE, INVESTMENT_INCOME, OTHER), `nature` (RECURRING / EXTRAORDINARY / TEMPORARY), `amount_cents`, `currency`, `frequency` (MONTHLY, BIMONTHLY, QUARTERLY, SEMIANNUAL, YEARLY, ONCE), `months_of_year` (para PLR em fev/ago), `start_date`, `end_date`, `annual_adjustment_percent`, `enabled`, `notes`.
+- `expense_plans`: `scenario_id`, `category_id`, nome, `amount_cents`, `currency`, mesmas frequências e datas, `annual_adjustment_percent`, `essential`, `enabled`, `notes`.
+- Todas com RLS por `auth.uid()`, GRANTs, `created_at/updated_at` + trigger, e índices por `scenario_id`.
+- Duplicar cenário: função no banco (`duplicate_scenario`) que copia o cenário e todos os planos filhos.
 
-- Novo enum `currency_code` com os 5 códigos.
-- Coluna `currency currency_code NOT NULL DEFAULT 'BRL'` em: `transactions`, `income_entries`, `accounts`, `account_balances`. Como todas as linhas atuais são BRL, o default preenche o histórico sem alterar valores.
-  - `accounts.currency` = moeda nativa da conta (usada como default nos saldos e transações da conta).
-  - `account_balances.currency` = moeda do saldo daquele mês (permanece imutável no histórico).
-- Coluna `display_currency` na preferência do usuário: reaproveitar `profiles.currency` (já existe, default 'BRL') convertendo-a para o enum — evita duas fontes de verdade.
-- Nova tabela `exchange_rates`: `base_currency`, `quote_currency`, `rate numeric`, `effective_on date`, `source text`, único por (base, quote, effective_on). Leitura pública para usuários autenticados (dados de câmbio não são financeiros do usuário), escrita apenas por service_role — nenhum vazamento entre usuários. GRANTs explícitos + RLS conforme padrão do projeto.
-- Nenhum `UPDATE`/`DELETE` em dados existentes; nenhum valor convertido persistido.
+Eventos futuros, metas, what-if e comparação de cenários continuam na Fase 4 (conforme o documento).
 
-## 2. Domínio (`src/domain/`)
+### 2. Domínio (funções puras, sem React)
 
-- `src/domain/currency.ts`: `CurrencyCode`, metadados (símbolo, locale, nome), `DEFAULT_CURRENCY = "BRL"`, tipo `Money { amountCents: number; currency: CurrencyCode }`, helpers `money()`, `isSameCurrency()`.
-- `src/domain/exchange.ts`: tipo `ExchangeRate { base, quote, rate, effectiveOn, source }`, `RateTable` (índice em memória), funções puras:
-  - `findRate(table, base, quote, onDate)` — usa a cotação vigente **na data**, com fallback à mais recente anterior; suporta inversão (BRL→CAD a partir de CAD→BRL) e triangulação via BRL.
-  - `convertMoney(money, target, rateLookup)` — determinística, retorna novo `Money`, identidade quando as moedas coincidem, nunca muta a origem.
-  - `sumMoney(list, target, lookup, onDate)` — converte item a item **antes** de somar (patrimônio multimoeda).
-- `financialMetrics.ts`: assinaturas passam a receber um conversor + moeda alvo; agregações (patrimônio, despesas, receitas, taxas) convertem cada componente antes de somar. Transferências e aportes continuam fora de despesa — regra intocada.
-- Formatação centralizada em `src/lib/format.ts`: `formatMoney(money)` via `Intl.NumberFormat("pt-BR", { currency })` → `R$ 5.267,00`, `CA$ 699,00`, `US$ 1.000,00`, `€ 1.000,00`, `AR$ …`. Nenhum símbolo escrito à mão em componentes.
+- `src/domain/planning.ts`: tipos `Scenario`, `IncomePlan`, `ExpensePlan`; regras de ocorrência mensal (ativo? dentro de start/end? cai na frequência? qual reajuste anual acumulado?). O reajuste só se aplica em aniversários da `start_date`, nunca mês a mês.
+- `src/domain/projectionEngine.ts`: recebe cenário, mês inicial, horizonte, patrimônio inicial (REAL, vindo de `account_balances`), planos, rentabilidade e conversor multi-moeda; devolve `ProjectionMonth[]` com `month, recurringIncome, extraordinaryIncome, totalIncome, essentialExpenses, discretionaryExpenses, totalExpenses, monthlyCashFlow, plannedInvestment, investmentReturn, endingNetWorth`.
+- Regras: `totalIncome = recorrente + extraordinária`; `cashFlow = totalIncome − totalExpenses`; `netWorthEnd = netWorthStart + cashFlow + investmentReturn`; investimento nunca é despesa; sobra alocada segundo `surplus_invest_percent` das configurações.
+- `bridgeReserveBalance` fica reservado para a Fase 3 (campo já previsto no tipo, calculado como 0 por enquanto).
 
-## 3. Serviço de cotação
+### 3. Telas
 
-- `src/lib/exchangeRates.functions.ts` (server function) + `src/lib/exchangeRates.server.ts`:
-  - `getRates()` — lê `exchange_rates` do banco.
-  - `refreshRates()` — busca cotações do dia numa fonte pública sem chave (Frankfurter/ECB, com ARS via fallback) e faz upsert de uma linha por par/dia; nunca sobrescreve datas passadas. Chamada sob demanda (botão em Configurações) e no máximo uma vez por dia.
-- Nenhuma chamada HTTP em componente React. Carregamento no cliente via um único `useQuery` com `staleTime` longo (`useExchangeRates`), reutilizado por toda a app através de um `CurrencyProvider` — sem refetch por render.
+**Cenários** (`/cenarios`): lista de cenários com badge de padrão, criar, renomear, duplicar, excluir, definir como padrão, e ajustar horizonte e rentabilidade esperada.
 
-## 4. UI (mudanças mínimas, visual preservado)
+**Planejamento** (`/planejamento`), com o cenário ativo selecionável no topo:
+- Abas *Receitas planejadas* e *Despesas planejadas*: tabelas com criar/editar/remover, moeda por linha, frequência, período de vigência, reajuste anual, essencial (despesas) e toggle de ativação.
+- *Projeção*: tabela mês a mês + gráfico de linha (Recharts) do patrimônio projetado, com histórico REAL em traço sólido e projeção em traço pontilhado, e cards de receita recorrente vs. extraordinária.
+- *Orçamento do mês*: planejado × real por categoria, com variância em valor e percentual, alimentado pelas transações já existentes.
 
-- `CurrencyProvider` + `useCurrency()`: expõe `displayCurrency`, `setDisplayCurrency` (persiste no perfil) e `convert/format` prontos.
-- Seletor discreto "Moeda: BRL ▾" no header do `AppLayout` (e em Configurações), global para o usuário.
-- Dashboard: mesmos cards e gráficos, valores na moeda de visualização; nota discreta quando houver conversão (`≈` + rótulo da data da cotação).
-- Transações: valor exibido **sempre na moeda original** (`CAD 699,00`) com linha secundária `≈ R$ 2.756,00` quando a moeda de visualização difere.
-- Formulários (transação, receita, conta, saldo): campo Moeda obrigatório, pré-preenchido com a moeda da conta ou o default do usuário.
-- Patrimônio: cada conta mostra sua moeda original; totais convertidos antes de agregar, com indicação de que o total é convertido.
-- Importação CSV: mapeamento ganha coluna opcional "Moeda"; sem coluna, usa a moeda padrão do usuário (CSVs atuais continuam funcionando). O preview exibe a coluna Moeda antes de importar. O `dedupe_hash` passa a incluir a moeda para não fundir 699 CAD com 699 BRL — hashes antigos permanecem válidos para linhas já importadas em BRL.
+Todos os valores respeitam a moeda de visualização com o "≈" já implementado; badges REAL / PLANEJADO / PROJETADO em todos os números.
 
-## 5. Testes
+### 4. Qualidade
 
-Adicionar Vitest (`bunx vitest run`) e `src/domain/__tests__/currency.test.ts` cobrindo os 9 casos pedidos: identidade BRL→BRL, CAD→BRL com taxa 4, BRL→CAD com 0,25, troca de moeda de visualização não muta o persistido, transação 699 CAD permanece 699 CAD, agregação de 3 ativos em moedas distintas, uso da cotação da data para transação antiga, CSV sem coluna moeda (default BRL) e CSV com moeda.
+Testes com vitest para o motor de projeção: reajuste anual só no aniversário, PLR em fevereiro e agosto como extraordinária, fim de bolsa em março/2027, e a identidade `netWorthEnd = netWorthStart + cashFlow + investmentReturn`.
 
-## Detalhes técnicos
+### Fora do escopo
 
-- Valores continuam inteiros em centavos; conversão arredonda apenas na apresentação (`Math.round`), nunca na persistência.
-- `exchange_rates` guarda `rate` como numeric para evitar perda de precisão.
-- Tipos gerados do banco são regenerados após a migration; o código que depende do novo enum é escrito depois disso.
-- Verificação final: typecheck, build, testes, lint e revisão visual desktop + mobile.
-
-## Limites
-
-Nada de planning, cenários, projeção, metas, spread cambial, ganho/perda cambial, conta multimoeda ou integração bancária. A fase termina aqui.
+Insights, health score, reserva ponte/emergência (Fase 3); eventos, metas, timeline, what-if e comparação de cenários (Fase 4); relatórios e PDF (Fase 5).
