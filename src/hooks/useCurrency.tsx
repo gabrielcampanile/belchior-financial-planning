@@ -45,6 +45,20 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
   const displayCurrency = toCurrencyCode(profile?.display_currency, DEFAULT_CURRENCY);
 
+  // Atualiza as cotações uma vez por dia, ao entrar na plataforma.
+  const refresh = useServerFn(refreshExchangeRates);
+  useEffect(() => {
+    if (!profile) return;
+    const today = new Date().toISOString().slice(0, 10);
+    if (typeof window === "undefined") return;
+    if (window.localStorage.getItem(RATES_SYNC_KEY) === today) return;
+    window.localStorage.setItem(RATES_SYNC_KEY, today);
+    void refresh()
+      .then(() => queryClient.invalidateQueries({ queryKey: ["exchange-rates"] }))
+      .catch(() => window.localStorage.removeItem(RATES_SYNC_KEY));
+  }, [profile, refresh, queryClient]);
+
+
   const mutation = useMutation({
     mutationFn: async (currency: CurrencyCode) => {
       const { data: auth } = await supabase.auth.getUser();
