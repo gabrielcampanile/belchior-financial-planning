@@ -118,8 +118,11 @@ function PlanejamentoPage() {
 
   const addIncomePlan = usePlanningInsert("income_plans");
   const addExpensePlan = usePlanningInsert("expense_plans");
+  const updateIncomePlan = usePlanningUpdate("income_plans");
+  const updateExpensePlan = usePlanningUpdate("expense_plans");
   const removeIncomePlan = usePlanningDelete("income_plans");
   const removeExpensePlan = usePlanningDelete("expense_plans");
+
 
   const startingNetWorth = netWorthForMonth(month, accounts, balances, convert).netWorth;
 
