@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Area,
