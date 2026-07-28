@@ -248,7 +248,11 @@ function PatrimonioPage() {
                       )}
                     </p>
                   ) : null}
+                  {isCarried(account.id) ? (
+                    <p className="text-xs text-muted-foreground">Saldo herdado do mês anterior — salve para confirmar.</p>
+                  ) : null}
                 </div>
+
                 <div className="flex shrink-0 items-center gap-2">
                   <span className="text-xs text-muted-foreground">{toCurrencyCode(account.currency)}</span>
                   <BalanceInput
