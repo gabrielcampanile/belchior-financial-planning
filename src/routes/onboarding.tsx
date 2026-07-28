@@ -45,8 +45,9 @@ function OnboardingPage() {
 
   const upsertProfile = useUpsert("profiles", "id");
   const upsertSettings = useUpsert("settings", "user_id");
-  const upsertAccount = useUpsert("accounts");
+  const upsertBalance = useUpsert("account_balances", "user_id,account_id,month");
   const upsertIncome = useUpsert("income_entries");
+
 
   const current = STEPS[step];
 
