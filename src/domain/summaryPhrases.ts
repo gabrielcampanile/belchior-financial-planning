@@ -28,11 +28,11 @@ export function dashboardPhrase(input: ContextPhraseInput): string {
   if (input.netWorthPrevious != null && input.netWorthPrevious !== input.netWorthNow) {
     const delta = input.netWorthNow - input.netWorthPrevious;
     if (delta > 0) return `Seu patrimônio cresceu ${formatCents(delta, currency)} neste mês.`;
-    return `Seu patrimônio recuou ${formatCents(Math.abs(delta, currency))} neste mês.`;
+    return `Seu patrimônio recuou ${formatCents(Math.abs(delta), currency)} neste mês.`;
   }
 
   if (input.metrics.income.total > 0 && input.metrics.balance < 0) {
-    return `Neste mês suas despesas superaram as receitas em ${formatCents(Math.abs(input.metrics.balance, currency))}.`;
+    return `Neste mês suas despesas superaram as receitas em ${formatCents(Math.abs(input.metrics.balance), currency)}.`;
   }
 
   if (input.metrics.income.total > 0) {
