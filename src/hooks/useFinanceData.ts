@@ -7,7 +7,6 @@ import type {
   Category,
   CategorizationRule,
   Closure,
-  IncomeEntry,
   Transaction,
 } from "@/domain/types";
 
