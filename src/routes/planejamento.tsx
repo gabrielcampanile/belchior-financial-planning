@@ -112,7 +112,7 @@ function PlanejamentoPage() {
   const { data: categories = [] } = useCategories();
   const { data: accounts = [] } = useAccounts();
   const { data: balances = [] } = useBalances();
-  const { data: incomes = [] } = useIncomeEntries(month);
+  
   const { data: transactions = [] } = useTransactions({
     from: monthStartISO(month),
     to: monthEndISO(month),
