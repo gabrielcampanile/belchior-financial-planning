@@ -102,16 +102,8 @@ export function useTransactions(range?: { from: string; to: string }) {
   });
 }
 
-export function useIncomeEntries(month?: string) {
-  return useQuery({
-    queryKey: ["income", month ?? "all"],
-    queryFn: async (): Promise<IncomeEntry[]> => {
-      let query = supabase.from("income_entries").select("*").order("month", { ascending: false });
-      if (month) query = query.eq("month", month);
-      return unwrap(await query.limit(2000));
-    },
-  });
-}
+// Receitas deixaram de ter tabela própria: são transações do tipo INCOME.
+
 
 export function useClosures() {
   return useQuery({
