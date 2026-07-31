@@ -82,7 +82,7 @@ const DEMO_EXPENSES: DemoExpenseSeed[] = [
 export interface DemoRows {
   accounts: Record<string, unknown>[];
   balancesFor: (accountIdByKey: Record<string, string>) => Record<string, unknown>[];
-  incomes: Record<string, unknown>[];
+  /** Receitas e despesas são ambas transações — não existe tabela separada de renda. */
   transactionsFor: (categoryIdByName: Record<string, string>) => Record<string, unknown>[];
 }
 
