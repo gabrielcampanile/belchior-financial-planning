@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { BrandMark } from "@/components/layout/AppLayout";
 import { parseCurrencyToCents } from "@/lib/format";
 import { currentMonthKey } from "@/lib/months";
+import { dedupeHash } from "@/domain/csv";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
