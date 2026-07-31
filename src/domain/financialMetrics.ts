@@ -3,7 +3,8 @@ import type {
   AccountBalance,
   Category,
   ClosureTotals,
-  IncomeEntry,
+  IncomeNature,
+  IncomeType,
   Transaction,
 } from "./types";
 import { money } from "./currency";
