@@ -171,12 +171,10 @@ function SettingsPage() {
       for (const category of categories) categoryIdByName[category.name] = category.id;
 
       const balances = demo.balancesFor(idByKey).map((r) => ({ ...r, user_id: userId }));
-      const incomes = demo.incomes.map((r) => ({ ...r, user_id: userId }));
       const txs = demo.transactionsFor(categoryIdByName).map((r) => ({ ...r, user_id: userId }));
 
       for (const [table, rows, conflict] of [
         ["account_balances", balances, "user_id,account_id,month"],
-        ["income_entries", incomes, undefined],
         ["transactions", txs, "user_id,dedupe_hash"],
       ] as const) {
         if (!rows.length) continue;
