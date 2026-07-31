@@ -93,12 +93,16 @@ function OnboardingPage() {
 
         const income = parseCurrencyToCents(values.income ?? "");
         if (income && income > 0) {
+          const occurredOn = `${currentMonthKey().slice(0, 7)}-01`;
           await upsertIncome.mutateAsync({
-            month: currentMonthKey(),
-            name: "Renda recorrente",
-            type: "SALARY",
-            nature: "RECURRING",
+            occurred_on: occurredOn,
+            description: "Renda recorrente",
             amount_cents: income,
+            type: "INCOME",
+            income_type: "SALARY",
+            income_nature: "RECURRING",
+            source: "MANUAL",
+            dedupe_hash: dedupeHash(occurredOn, income, "Renda recorrente"),
           });
         }
       }
