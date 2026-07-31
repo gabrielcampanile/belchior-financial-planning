@@ -141,7 +141,7 @@ type TableName =
   | "accounts"
   | "account_balances"
   | "transactions"
-  | "income_entries"
+  
   | "closures";
 
 const UPSERT_CHUNK = 400;
