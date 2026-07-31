@@ -103,12 +103,23 @@ export function parseAmountToCents(raw: string): number | null {
   return negative ? -cents : cents;
 }
 
+/** Origem do arquivo: extrato bancário ou fatura de cartão. */
+export const SOURCE_KINDS = ["STATEMENT", "CARD_INVOICE"] as const;
+export type SourceKind = (typeof SOURCE_KINDS)[number];
+
+export const SOURCE_KIND_LABEL: Record<SourceKind, string> = {
+  STATEMENT: "Extrato bancário",
+  CARD_INVOICE: "Fatura de cartão",
+};
+
 export const importMappingSchema = z.object({
   dateColumn: z.number().int().min(0),
   descriptionColumn: z.number().int().min(0),
   amountColumn: z.number().int().min(0),
   dateFormat: z.enum(["DD/MM/YYYY", "YYYY-MM-DD", "MM/DD/YYYY"]),
   hasHeader: z.boolean(),
+  /** Origem do arquivo — define como o sinal do valor é interpretado. */
+  sourceKind: z.enum(SOURCE_KINDS),
   /** true quando valores negativos representam despesa (padrão de extrato) */
   negativeIsExpense: z.boolean(),
   /** Moeda aplicada a todas as linhas quando não há coluna de moeda. */
@@ -116,6 +127,23 @@ export const importMappingSchema = z.object({
   /** Coluna opcional com o código da moeda de cada linha. */
   currencyColumn: z.number().int().min(0).nullable(),
 });
+
+/**
+ * Decide se uma linha é entrada (receita) ou saída (despesa), de forma pura.
+ * - Extrato: sinal define o fluxo (com `negativeIsExpense` invertendo a convenção).
+ * - Fatura de cartão: tudo é despesa; negativo é estorno e vira receita.
+ */
+export function classifyRow(
+  amountCents: number,
+  sourceKind: SourceKind,
+  negativeIsExpense: boolean,
+): "EXPENSE" | "INCOME" {
+  if (sourceKind === "CARD_INVOICE") {
+    return amountCents < 0 ? "INCOME" : "EXPENSE";
+  }
+  const isExpense = negativeIsExpense ? amountCents < 0 : amountCents > 0;
+  return isExpense ? "EXPENSE" : "INCOME";
+}
 
 export type ImportMapping = z.infer<typeof importMappingSchema>;
 
