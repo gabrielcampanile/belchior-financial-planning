@@ -231,11 +231,10 @@ export interface MonthMetrics {
 export function monthMetrics(
   month: string,
   transactions: Transaction[],
-  incomes: IncomeEntry[],
   categories: Category[],
   convert: MoneyConverter = identityConverter,
 ): MonthMetrics {
-  const income = incomeBreakdown(incomes, convert);
+  const income = incomeBreakdown(transactions, categories, convert);
   const expenses = expenseBreakdown(transactions, categories, convert);
   const investments = investmentTotal(transactions, convert);
   return {
