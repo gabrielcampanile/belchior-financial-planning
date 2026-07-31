@@ -57,7 +57,7 @@ import {
   useAccounts,
   useBalances,
   useCategories,
-  useIncomeEntries,
+  
   useTransactions,
 } from "@/hooks/useFinanceData";
 import {
@@ -112,7 +112,7 @@ function PlanejamentoPage() {
   const { data: categories = [] } = useCategories();
   const { data: accounts = [] } = useAccounts();
   const { data: balances = [] } = useBalances();
-  const { data: incomes = [] } = useIncomeEntries(month);
+  
   const { data: transactions = [] } = useTransactions({
     from: monthStartISO(month),
     to: monthEndISO(month),
@@ -144,7 +144,7 @@ function PlanejamentoPage() {
 
   const summary = useMemo(() => summarizeProjection(projection), [projection]);
 
-  const actual = monthMetrics(month, transactions, incomes, categories, convert);
+  const actual = monthMetrics(month, transactions, categories, convert);
   const plannedMonth = projection.find((p) => p.month === month);
 
   const budget = [

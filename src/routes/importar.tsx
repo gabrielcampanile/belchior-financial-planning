@@ -14,8 +14,12 @@ import {
   mapRows,
   parseCsv,
   dedupeHash,
+  classifyRow,
+  SOURCE_KIND_LABEL,
+  SOURCE_KINDS,
   type Delimiter,
   type ImportMapping,
+  type SourceKind,
 } from "@/domain/csv";
 import { applyRules } from "@/domain/categorizationEngine";
 import { useCategories, useRules, useTransactions, useUpsert } from "@/hooks/useFinanceData";
@@ -48,6 +52,7 @@ function ImportPage() {
     amountColumn: 2,
     dateFormat: "DD/MM/YYYY",
     hasHeader: true,
+    sourceKind: "STATEMENT",
     negativeIsExpense: true,
     currency: DEFAULT_CURRENCY,
     currencyColumn: null,
@@ -65,9 +70,11 @@ function ImportPage() {
   const prepared = useMemo(() => {
     if (!result) return [];
     return result.parsed.map((row) => {
-      const isExpense = mapping.negativeIsExpense ? row.amount_cents < 0 : row.amount_cents > 0;
+      const flow = classifyRow(row.amount_cents, mapping.sourceKind, mapping.negativeIsExpense);
       const match = applyRules(row.description, rules);
-      const type = match?.type ?? (isExpense ? "EXPENSE" : "INCOME");
+      // Regras podem reclassificar (ex.: aporte de investimento), mas nunca
+      // transformam uma saída de cartão em receita.
+      const type = match?.type ?? flow;
       const hash = dedupeHash(row.occurred_on, Math.abs(row.amount_cents), row.description, row.currency);
       return {
         occurred_on: row.occurred_on,
@@ -76,12 +83,14 @@ function ImportPage() {
         currency: row.currency,
         type,
         category_id: match?.categoryId ?? null,
+        income_type: type === "INCOME" ? ("OTHER" as const) : null,
+        income_nature: type === "INCOME" ? ("RECURRING" as const) : null,
         source: "IMPORT",
         dedupe_hash: hash,
         duplicate: existingHashes.has(hash),
       };
     });
-  }, [result, mapping.negativeIsExpense, rules, existingHashes]);
+  }, [result, mapping.sourceKind, mapping.negativeIsExpense, rules, existingHashes]);
 
   const newRows = prepared.filter((r) => !r.duplicate);
 
@@ -216,6 +225,29 @@ function ImportPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="grid gap-2">
+                <Label>Origem do arquivo</Label>
+                <Select
+                  value={mapping.sourceKind}
+                  onValueChange={(v) => setMapping({ ...mapping, sourceKind: v as SourceKind })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SOURCE_KINDS.map((kind) => (
+                      <SelectItem key={kind} value={kind}>
+                        {SOURCE_KIND_LABEL[kind]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {mapping.sourceKind === "CARD_INVOICE"
+                    ? "Fatura: tudo vira despesa; valores negativos entram como estorno (receita)."
+                    : "Extrato: o sinal do valor define entrada ou saída."}
+                </p>
+              </div>
               <div className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
                 <span className="text-sm">Primeira linha é cabeçalho</span>
                 <Switch
@@ -223,13 +255,15 @@ function ImportPage() {
                   onCheckedChange={(v) => setMapping({ ...mapping, hasHeader: v })}
                 />
               </div>
-              <div className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
-                <span className="text-sm">Valor negativo é despesa</span>
-                <Switch
-                  checked={mapping.negativeIsExpense}
-                  onCheckedChange={(v) => setMapping({ ...mapping, negativeIsExpense: v })}
-                />
-              </div>
+              {mapping.sourceKind === "STATEMENT" ? (
+                <div className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
+                  <span className="text-sm">Valor negativo é despesa</span>
+                  <Switch
+                    checked={mapping.negativeIsExpense}
+                    onCheckedChange={(v) => setMapping({ ...mapping, negativeIsExpense: v })}
+                  />
+                </div>
+              ) : null}
             </div>
           </Panel>
 

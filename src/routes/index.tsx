@@ -8,7 +8,7 @@ import {
   useAccounts,
   useBalances,
   useCategories,
-  useIncomeEntries,
+  
   useProfile,
   useSettings,
   useTransactions,
@@ -61,15 +61,14 @@ function DashboardPage() {
   const { data: accounts = [] } = useAccounts();
   const { data: balances = [] } = useBalances();
   const { data: categories = [] } = useCategories();
-  const { data: incomes = [] } = useIncomeEntries(month);
   const { data: transactions = [] } = useTransactions({
     from: monthStartISO(month),
     to: monthEndISO(month),
   });
 
   const metrics = useMemo(
-    () => monthMetrics(month, transactions, incomes, categories, convert),
-    [month, transactions, incomes, categories, convert],
+    () => monthMetrics(month, transactions, categories, convert),
+    [month, transactions, categories, convert],
   );
   const series = useMemo(
     () => netWorthSeries(lastMonths(month, 12), accounts, balances, convert),
@@ -80,7 +79,7 @@ function DashboardPage() {
   const essentialMonthly = metrics.expenses.essential || metrics.expenses.total;
   const months = reserveMonths(now.liquid, essentialMonthly);
   const targetMonths = settings?.emergency_months ?? 6;
-  const hasData = accounts.length > 0 || transactions.length > 0 || incomes.length > 0;
+  const hasData = accounts.length > 0 || transactions.length > 0;
 
   const phrase = dashboardPhrase({
     netWorthNow: now.netWorth,

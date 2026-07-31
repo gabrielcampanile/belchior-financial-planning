@@ -1,39 +1,48 @@
-## Fase 2 — Planejamento
+## Objetivo
 
-Objetivo: responder "como será minha vida financeira nos próximos meses?" com números determinísticos, separando sempre REAL / PLANEJADO / PROJETADO.
+O fechamento mensal passa a ser 100% derivado das transações. Você importa extrato e fatura, ajusta o que estiver errado na aba Transações, e o fechamento mostra receita total, despesa total, saldo do mês e gráficos de composição — sem nenhum lançamento manual.
 
-### 1. Banco de dados (uma migração)
+## Situação atual (verificada no código)
 
-- `scenarios`: nome, descrição, `is_default`, `base_currency`, `start_month`, `horizon_months` (padrão 60), `expected_monthly_return` (herda de settings), `is_demo`.
-- `income_plans`: `scenario_id`, nome, `type` (SALARY, VR, BENEFIT, SCHOLARSHIP, BONUS, PLR, FREELANCE, INVESTMENT_INCOME, OTHER), `nature` (RECURRING / EXTRAORDINARY / TEMPORARY), `amount_cents`, `currency`, `frequency` (MONTHLY, BIMONTHLY, QUARTERLY, SEMIANNUAL, YEARLY, ONCE), `months_of_year` (para PLR em fev/ago), `start_date`, `end_date`, `annual_adjustment_percent`, `enabled`, `notes`.
-- `expense_plans`: `scenario_id`, `category_id`, nome, `amount_cents`, `currency`, mesmas frequências e datas, `annual_adjustment_percent`, `essential`, `enabled`, `notes`.
-- Todas com RLS por `auth.uid()`, GRANTs, `created_at/updated_at` + trigger, e índices por `scenario_id`.
-- Duplicar cenário: função no banco (`duplicate_scenario`) que copia o cenário e todos os planos filhos.
+- `monthMetrics` calcula receita **apenas** da tabela `income_entries`; transações com tipo Receita são ignoradas em todos os cálculos (Dashboard, Fechamentos, Planejamento).
+- Por isso a receita do extrato não conta e precisa ser redigitada no Fechamento — daí a duplicação percebida.
+- As categorias criadas por padrão são só de despesa/investimento (`seed_defaults`); a coluna `kind` existe em `categories` mas não há categorias de receita.
+- Na importação, o tipo é definido só pelo sinal do valor + regras de categorização.
 
-Eventos futuros, metas, what-if e comparação de cenários continuam na Fase 4 (conforme o documento).
+## O que vai mudar
 
-### 2. Domínio (funções puras, sem React)
+### 1. Receita vem das transações
+- `incomeBreakdown` passa a somar transações do tipo Receita, agrupadas por **natureza** (recorrente / temporária / extraordinária), **tipo de renda** (Salário, VR/VA, Bônus, PLR, Freelance, Rendimentos, Outras) e **categoria**.
+- Transferências e aportes continuam fora de receita e despesa.
+- Dashboard, Fechamentos e o comparativo Planejado vs. Real usam a mesma fonte automaticamente.
 
-- `src/domain/planning.ts`: tipos `Scenario`, `IncomePlan`, `ExpensePlan`; regras de ocorrência mensal (ativo? dentro de start/end? cai na frequência? qual reajuste anual acumulado?). O reajuste só se aplica em aniversários da `start_date`, nunca mês a mês.
-- `src/domain/projectionEngine.ts`: recebe cenário, mês inicial, horizonte, patrimônio inicial (REAL, vindo de `account_balances`), planos, rentabilidade e conversor multi-moeda; devolve `ProjectionMonth[]` com `month, recurringIncome, extraordinaryIncome, totalIncome, essentialExpenses, discretionaryExpenses, totalExpenses, monthlyCashFlow, plannedInvestment, investmentReturn, endingNetWorth`.
-- Regras: `totalIncome = recorrente + extraordinária`; `cashFlow = totalIncome − totalExpenses`; `netWorthEnd = netWorthStart + cashFlow + investmentReturn`; investimento nunca é despesa; sobra alocada segundo `surplus_invest_percent` das configurações.
-- `bridgeReserveBalance` fica reservado para a Fase 3 (campo já previsto no tipo, calculado como 0 por enquanto).
+### 2. Fim das receitas manuais
+- Migração: cada receita já lançada vira uma transação do tipo Receita no dia 1º do mês, com tipo e natureza preservados, marcada como origem manual.
+- A aba "Receitas do mês" some do Fechamento; a tabela `income_entries` é removida depois da migração.
+- Onboarding e dados de demonstração passam a criar transações de receita em vez de receitas manuais.
 
-### 3. Telas
+### 3. Categorias de receita
+- Novas categorias padrão de receita: Salário, VR/VA, Bônus, PLR, Freelance, Rendimentos, Aluguel recebido, Outras receitas (criadas para contas novas e para a sua conta atual).
+- O seletor de categoria em Transações e na importação passa a mostrar só categorias compatíveis com o tipo da transação (receita x despesa), evitando misturar.
 
-**Cenários** (`/cenarios`): lista de cenários com badge de padrão, criar, renomear, duplicar, excluir, definir como padrão, e ajustar horizonte e rentabilidade esperada.
+### 4. Importação: extrato x fatura de cartão
+- Novo passo na tela de importação: escolher **Extrato bancário** (negativo = despesa, positivo = receita) ou **Fatura de cartão** (tudo despesa; negativo = estorno, tratado como redução/receita).
+- O preview passa a mostrar contagem de entradas e saídas, com o tipo e a categoria sugeridos por linha, e permite trocar tipo/categoria antes de confirmar.
 
-**Planejamento** (`/planejamento`), com o cenário ativo selecionável no topo:
-- Abas *Receitas planejadas* e *Despesas planejadas*: tabelas com criar/editar/remover, moeda por linha, frequência, período de vigência, reajuste anual, essencial (despesas) e toggle de ativação.
-- *Projeção*: tabela mês a mês + gráfico de linha (Recharts) do patrimônio projetado, com histórico REAL em traço sólido e projeção em traço pontilhado, e cards de receita recorrente vs. extraordinária.
-- *Orçamento do mês*: planejado × real por categoria, com variância em valor e percentual, alimentado pelas transações já existentes.
+### 5. Transações: separar em vez de misturar
+- Abas "Todas / Receitas / Despesas / Transferências e aportes" no topo da lista, com totais de cada aba.
+- Cada linha ganha edição completa (data, descrição, valor, moeda, tipo, categoria, conta) e, para receitas, tipo de renda e natureza. Mudar uma transação de Despesa para Receita move-a para a aba certa e limpa a categoria incompatível.
 
-Todos os valores respeitam a moeda de visualização com o "≈" já implementado; badges REAL / PLANEJADO / PROJETADO em todos os números.
+### 6. Fechamento com gráficos
+- Cards de Receita total, Despesa total, Saldo do mês e Aportes calculados só das transações.
+- **Dois gráficos donut lado a lado**: composição da receita por categoria e composição da despesa por categoria, no padrão visual dark premium do app (Recharts, tooltip com valor formatado na moeda de exibição e percentual, legenda com valores, categorias pequenas agrupadas em "Outros", clique numa fatia filtra a lista de transações do mês).
+- Quebra de receita por natureza junto da quebra de despesa essencial x discricionária.
+- Aviso quando houver receita ou despesa sem categoria no mês, com link direto para a aba correspondente em Transações.
 
-### 4. Qualidade
+## Detalhes técnicos
 
-Testes com vitest para o motor de projeção: reajuste anual só no aniversário, PLR em fevereiro e agosto como extraordinária, fim de bolsa em março/2027, e a identidade `netWorthEnd = netWorthStart + cashFlow + investmentReturn`.
-
-### Fora do escopo
-
-Insights, health score, reserva ponte/emergência (Fase 3); eventos, metas, timeline, what-if e comparação de cenários (Fase 4); relatórios e PDF (Fase 5).
+- Migração de banco: adicionar `income_type` e `income_nature` em `transactions` (default `OTHER` / `RECURRING`, usados só quando `type = 'INCOME'`); inserir categorias de receita com `kind = 'INCOME'` para usuários existentes e atualizar `seed_defaults`; copiar `income_entries` para `transactions`; dropar `income_entries` e ajustar limpeza de demo/configurações que referenciam a tabela.
+- Domínio: `incomeBreakdown(transactions, categories, convert)` substitui a versão baseada em `IncomeEntry` e devolve também `byCategory`; `monthMetrics` perde o parâmetro `incomes`; testes unitários cobrindo natureza, agrupamento por categoria, multi-moeda e exclusão de transferências/aportes.
+- Gráficos: componente reutilizável `CategoryDonut` em `src/components/finance/`, alimentado por `income.byCategory` e `expenses.byCategory`, usando tokens de cor do design system (sem cores hardcoded).
+- Importação: `ImportMapping` ganha `sourceKind: 'STATEMENT' | 'CARD_INVOICE'`; a derivação de tipo sai da tela e vira função pura testada em `src/domain/csv.ts`.
+- Arquivos afetados: `src/domain/financialMetrics.ts`, `src/domain/csv.ts`, `src/domain/types.ts`, `src/hooks/useFinanceData.ts`, `src/components/finance/CategoryDonut.tsx` (novo), `src/routes/transacoes.tsx`, `src/routes/importar.tsx`, `src/routes/fechamentos.tsx`, `src/routes/index.tsx`, `src/routes/planejamento.tsx`, `src/routes/onboarding.tsx`, `src/routes/configuracoes.tsx`, `src/lib/demoData.ts`.

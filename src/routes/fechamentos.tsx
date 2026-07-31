@@ -1,43 +1,23 @@
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
-import { toast } from "sonner";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { EmptyState, MetricValue, PageHeader, Panel, SectionHeader } from "@/components/finance/primitives";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CategoryDonut } from "@/components/finance/CategoryDonut";
+import { toast } from "sonner";
 import {
   useAccounts,
   useBalances,
   useCategories,
   useClosures,
-  useDeleteRow,
-  useIncomeEntries,
   useTransactions,
   useUpsert,
 } from "@/hooks/useFinanceData";
-import {
-  INCOME_NATURE_LABEL,
-  INCOME_TYPE_LABEL,
-  type IncomeNature,
-  type IncomeType,
-} from "@/domain/types";
+import { INCOME_TYPE_LABEL, type IncomeType } from "@/domain/types";
 import { buildClosureTotals, monthMetrics, netWorthForMonth } from "@/domain/financialMetrics";
 import { closureHighlights } from "@/domain/summaryPhrases";
-import { formatCents, formatPercent, parseCurrencyToCents } from "@/lib/format";
+import { formatCents, formatPercent } from "@/lib/format";
 import { useCurrency } from "@/hooks/useCurrency";
-import { DEFAULT_CURRENCY, toCurrencyCode, type CurrencyCode } from "@/domain/currency";
-import { CurrencyField } from "@/components/finance/CurrencySelect";
 import { currentMonthKey, monthEndISO, monthLabel, monthStartISO, shiftMonth } from "@/lib/months";
 
 export const Route = createFileRoute("/fechamentos")({
@@ -55,95 +35,30 @@ export const Route = createFileRoute("/fechamentos")({
   component: ClosuresPage,
 });
 
-const MAX_OCCURRENCES = 60;
-
-const FREQUENCY_STEP = {
-  MONTHLY: 1,
-  BIMONTHLY: 2,
-  QUARTERLY: 3,
-  SEMIANNUAL: 6,
-  ANNUAL: 12,
-} as const;
-
-type FrequencyKey = keyof typeof FREQUENCY_STEP;
-
-const FREQUENCY_LABEL: Record<FrequencyKey, string> = {
-  MONTHLY: "Mensal",
-  BIMONTHLY: "Bimestral",
-  QUARTERLY: "Trimestral",
-  SEMIANNUAL: "Semestral",
-  ANNUAL: "Anual",
-};
-
 function ClosuresPage() {
   const [month, setMonth] = useState(currentMonthKey());
-  const [open, setOpen] = useState(false);
 
   const { data: categories = [] } = useCategories();
   const { data: accounts = [] } = useAccounts();
   const { data: balances = [] } = useBalances();
   const { data: closures = [] } = useClosures();
-  const { data: incomes = [] } = useIncomeEntries(month);
   const { data: transactions = [] } = useTransactions({
     from: monthStartISO(month),
     to: monthEndISO(month),
   });
 
-  const upsertIncome = useUpsert("income_entries");
-  const removeIncome = useDeleteRow("income_entries");
   const upsertClosure = useUpsert("closures", "user_id,month");
   const { convert, displayCurrency } = useCurrency();
 
   const metrics = useMemo(
-    () => monthMetrics(month, transactions, incomes, categories, convert),
-    [month, transactions, incomes, categories, convert],
+    () => monthMetrics(month, transactions, categories, convert),
+    [month, transactions, categories, convert],
   );
   const netWorth = netWorthForMonth(month, accounts, balances, convert).netWorth;
   const closure = closures.find((c) => c.month === month);
   const uncategorized = transactions.filter((t) => t.type === "EXPENSE" && !t.category_id).length;
+  const incomeCount = transactions.filter((t) => t.type === "INCOME").length;
   const highlights = closureHighlights(month, metrics, displayCurrency);
-
-  const [form, setForm] = useState({
-    name: "",
-    amount: "",
-    type: "SALARY" as IncomeType,
-    nature: "RECURRING" as IncomeNature,
-    currency: DEFAULT_CURRENCY as CurrencyCode,
-    frequency: "MONTHLY" as FrequencyKey,
-    occurrences: "12",
-  });
-
-  async function addIncome() {
-    const cents = parseCurrencyToCents(form.amount);
-    if (!form.name.trim() || !cents) {
-      toast.error("Informe nome e valor da receita.");
-      return;
-    }
-
-    const step = form.nature === "EXTRAORDINARY" ? 1 : FREQUENCY_STEP[form.frequency];
-    const count =
-      form.nature === "EXTRAORDINARY"
-        ? 1
-        : Math.min(Math.max(Number(form.occurrences) || 1, 1), MAX_OCCURRENCES);
-
-    const rows = Array.from({ length: count }, (_, i) => ({
-      month: shiftMonth(month, i * step),
-      name: form.name.trim(),
-      type: form.type,
-      nature: form.nature,
-      amount_cents: Math.abs(cents),
-      currency: form.currency,
-    }));
-
-    try {
-      await upsertIncome.mutateAsync(rows);
-      toast.success(count > 1 ? `Receita registrada em ${count} meses.` : "Receita registrada.");
-      setOpen(false);
-      setForm({ ...form, name: "", amount: "" });
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível salvar a receita.");
-    }
-  }
 
   async function toggleClosure() {
     const closing = closure?.status !== "CLOSED";
@@ -160,7 +75,7 @@ function ClosuresPage() {
     <AppLayout>
       <PageHeader
         title="Fechamento mensal"
-        description="Importe, categorize, revise receitas, atualize saldos e feche o mês."
+        description="Receitas e despesas vêm 100% das transações — nada é lançado manualmente aqui."
         action={
           <Button onClick={toggleClosure} variant={closure?.status === "CLOSED" ? "outline" : "default"}>
             {closure?.status === "CLOSED" ? "Reabrir mês" : "Fechar mês"}
@@ -203,150 +118,59 @@ function ClosuresPage() {
         />
       </div>
 
-      <Panel className="space-y-4">
-        <SectionHeader
-          title="Receitas do mês"
-          description="Recorrentes, temporárias e extraordinárias são separadas nos cálculos."
-          action={
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <Plus className="mr-1 h-4 w-4" /> Receita
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Nova receita de {monthLabel(month)}</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4">
-                  <div className="grid gap-2">
-                    <Label>Nome</Label>
-                    <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Valor</Label>
-                    <Input
-                      value={form.amount}
-                      placeholder="8.500,00"
-                      onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Moeda</Label>
-                    <CurrencyField
-                      value={form.currency}
-                      onChange={(currency) => setForm({ ...form, currency })}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Tipo</Label>
-                    <Select
-                      value={form.type}
-                      onValueChange={(v) => setForm({ ...form, type: v as IncomeType })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(INCOME_TYPE_LABEL) as IncomeType[]).map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {INCOME_TYPE_LABEL[t]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Natureza</Label>
-                    <Select
-                      value={form.nature}
-                      onValueChange={(v) => setForm({ ...form, nature: v as IncomeNature })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(INCOME_NATURE_LABEL) as IncomeNature[]).map((n) => (
-                          <SelectItem key={n} value={n}>
-                            {INCOME_NATURE_LABEL[n]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {form.nature !== "EXTRAORDINARY" ? (
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="grid gap-2">
-                        <Label>Frequência</Label>
-                        <Select
-                          value={form.frequency}
-                          onValueChange={(v) => setForm({ ...form, frequency: v as FrequencyKey })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {(Object.keys(FREQUENCY_LABEL) as FrequencyKey[]).map((f) => (
-                              <SelectItem key={f} value={f}>
-                                {FREQUENCY_LABEL[f]}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid gap-2">
-                        <Label>Ocorrências</Label>
-                        <Input
-                          inputMode="numeric"
-                          value={form.occurrences}
-                          onChange={(e) => setForm({ ...form, occurrences: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  ) : null}
-                  <p className="text-xs text-muted-foreground">
-                    {form.nature === "EXTRAORDINARY"
-                      ? "Receita única, lançada apenas neste mês."
-                      : `Será lançada a partir de ${monthLabel(month)}, no máximo ${MAX_OCCURRENCES} meses à frente.`}
-                  </p>
-                </div>
-                <DialogFooter>
-                  <Button onClick={addIncome} disabled={upsertIncome.isPending}>
-                    Salvar
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          }
-        />
-        {incomes.length === 0 ? (
-          <EmptyState
-            title="Nenhuma receita registrada"
-            description="Registre salário, benefícios, bolsa, PLR ou freelances deste mês."
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Panel className="space-y-4">
+          <SectionHeader
+            title="Receitas por categoria"
+            description={`${incomeCount} transação(ões) de entrada em ${monthLabel(month)}.`}
           />
-        ) : (
-          <ul className="divide-y divide-border">
-            {incomes.map((income) => (
-              <li key={income.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm">{income.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {INCOME_TYPE_LABEL[income.type]} · {INCOME_NATURE_LABEL[income.nature]}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  <span className="text-sm tabular-nums text-positive">
-                    {formatCents(income.amount_cents, toCurrencyCode(income.currency))}
+          <CategoryDonut
+            slices={metrics.income.byCategory}
+            currency={displayCurrency}
+            emptyLabel="Nenhuma receita neste mês"
+          />
+          {metrics.income.byType.length ? (
+            <ul className="space-y-1.5">
+              {metrics.income.byType.map((item) => (
+                <li key={item.type} className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    {INCOME_TYPE_LABEL[item.type as IncomeType] ?? item.type}
                   </span>
-                  <Button variant="ghost" size="sm" onClick={() => removeIncome.mutate(income.id)}>
-                    Excluir
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Panel>
+                  <span className="tabular-nums text-positive">
+                    {formatCents(item.total, displayCurrency)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </Panel>
+
+        <Panel className="space-y-4">
+          <SectionHeader
+            title="Despesas por categoria"
+            description={`Essenciais ${formatCents(metrics.expenses.essential, displayCurrency)} · discricionárias ${formatCents(metrics.expenses.discretionary, displayCurrency)}.`}
+          />
+          <CategoryDonut
+            slices={metrics.expenses.byCategory}
+            currency={displayCurrency}
+            emptyLabel="Nenhuma despesa neste mês"
+          />
+        </Panel>
+      </div>
+
+      {transactions.length === 0 ? (
+        <Panel>
+          <EmptyState
+            title="Nenhuma transação neste mês"
+            description="Importe um extrato ou uma fatura de cartão para que receitas e despesas apareçam aqui."
+            action={
+              <Button asChild size="sm">
+                <Link to="/importar">Importar arquivo</Link>
+              </Button>
+            }
+          />
+        </Panel>
+      ) : null}
 
       <Panel className="space-y-4">
         <SectionHeader title="Destaques do mês" description="Regras determinísticas sobre dados reais." />

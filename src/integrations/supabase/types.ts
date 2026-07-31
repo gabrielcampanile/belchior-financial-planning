@@ -383,51 +383,6 @@ export type Database = {
         }
         Relationships: []
       }
-      income_entries: {
-        Row: {
-          amount_cents: number
-          created_at: string
-          currency: Database["public"]["Enums"]["currency_code"]
-          id: string
-          is_demo: boolean
-          month: string
-          name: string
-          nature: string
-          notes: string | null
-          type: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          amount_cents?: number
-          created_at?: string
-          currency?: Database["public"]["Enums"]["currency_code"]
-          id?: string
-          is_demo?: boolean
-          month: string
-          name: string
-          nature?: string
-          notes?: string | null
-          type?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          amount_cents?: number
-          created_at?: string
-          currency?: Database["public"]["Enums"]["currency_code"]
-          id?: string
-          is_demo?: boolean
-          month?: string
-          name?: string
-          nature?: string
-          notes?: string | null
-          type?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       income_plans: {
         Row: {
           amount_cents: number
@@ -618,6 +573,8 @@ export type Database = {
           dedupe_hash: string
           description: string
           id: string
+          income_nature: string
+          income_type: string
           is_demo: boolean
           notes: string | null
           occurred_on: string
@@ -636,6 +593,8 @@ export type Database = {
           dedupe_hash: string
           description: string
           id?: string
+          income_nature?: string
+          income_type?: string
           is_demo?: boolean
           notes?: string | null
           occurred_on: string
@@ -654,6 +613,8 @@ export type Database = {
           dedupe_hash?: string
           description?: string
           id?: string
+          income_nature?: string
+          income_type?: string
           is_demo?: boolean
           notes?: string | null
           occurred_on?: string

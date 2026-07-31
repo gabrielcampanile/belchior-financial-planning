@@ -63,18 +63,10 @@ export interface Transaction {
   dedupe_hash: string;
   notes: string | null;
   is_demo: boolean;
-}
-
-export interface IncomeEntry {
-  currency: CurrencyCode;
-  id: string;
-  month: string;
-  name: string;
-  type: IncomeType;
-  nature: IncomeNature;
-  amount_cents: number;
-  notes: string | null;
-  is_demo: boolean;
+  /** Só relevante quando type === "INCOME". */
+  income_type: IncomeType;
+  /** Só relevante quando type === "INCOME". */
+  income_nature: IncomeNature;
 }
 
 export interface Account {

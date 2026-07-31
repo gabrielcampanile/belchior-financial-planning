@@ -7,7 +7,6 @@ import type {
   Category,
   CategorizationRule,
   Closure,
-  IncomeEntry,
   Transaction,
 } from "@/domain/types";
 
@@ -103,16 +102,8 @@ export function useTransactions(range?: { from: string; to: string }) {
   });
 }
 
-export function useIncomeEntries(month?: string) {
-  return useQuery({
-    queryKey: ["income", month ?? "all"],
-    queryFn: async (): Promise<IncomeEntry[]> => {
-      let query = supabase.from("income_entries").select("*").order("month", { ascending: false });
-      if (month) query = query.eq("month", month);
-      return unwrap(await query.limit(2000));
-    },
-  });
-}
+// Receitas deixaram de ter tabela própria: são transações do tipo INCOME.
+
 
 export function useClosures() {
   return useQuery({
@@ -134,7 +125,7 @@ export function useInvalidateFinance() {
       "accounts",
       "balances",
       "transactions",
-      "income",
+      "planning",
       "closures",
     ]) {
       void qc.invalidateQueries({ queryKey: [key] });
@@ -150,7 +141,7 @@ type TableName =
   | "accounts"
   | "account_balances"
   | "transactions"
-  | "income_entries"
+  
   | "closures";
 
 const UPSERT_CHUNK = 400;

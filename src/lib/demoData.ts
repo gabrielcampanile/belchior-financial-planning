@@ -32,20 +32,23 @@ interface DemoIncomeSeed {
   name: string;
   type: IncomeType;
   nature: IncomeNature;
+  /** Categoria de RECEITA (conjunto separado das categorias de despesa). */
+  category: string;
   amount: number;
+  day: number;
   from: number;
   to: number;
 }
 
 /** índices de mês relativos a DEMO_START (0 = Ago/2026) */
 const DEMO_INCOMES: DemoIncomeSeed[] = [
-  { name: "Salário Gabriel", type: "SALARY", nature: "RECURRING", amount: 1_450_000, from: 0, to: 12 },
-  { name: "Salário Luana", type: "SALARY", nature: "RECURRING", amount: 780_000, from: 0, to: 12 },
-  { name: "VR/VA do casal", type: "VR", nature: "RECURRING", amount: 160_000, from: 0, to: 12 },
-  { name: "Bolsa de pesquisa (temporária)", type: "SCHOLARSHIP", nature: "TEMPORARY", amount: 220_000, from: 0, to: 7 },
-  { name: "PLR anual", type: "PLR", nature: "EXTRAORDINARY", amount: 1_800_000, from: 5, to: 5 },
-  { name: "Freelance de design", type: "FREELANCE", nature: "TEMPORARY", amount: 120_000, from: 2, to: 9 },
-  { name: "Rendimentos de investimentos", type: "INVESTMENT_INCOME", nature: "RECURRING", amount: 52_000, from: 0, to: 12 },
+  { name: "Salário Gabriel", type: "SALARY", nature: "RECURRING", category: "Salário", amount: 1_450_000, day: 5, from: 0, to: 12 },
+  { name: "Salário Luana", type: "SALARY", nature: "RECURRING", category: "Salário", amount: 780_000, day: 5, from: 0, to: 12 },
+  { name: "VR/VA do casal", type: "VR", nature: "RECURRING", category: "VR/VA", amount: 160_000, day: 1, from: 0, to: 12 },
+  { name: "Bolsa de pesquisa (temporária)", type: "SCHOLARSHIP", nature: "TEMPORARY", category: "Bolsa", amount: 220_000, day: 10, from: 0, to: 7 },
+  { name: "PLR anual", type: "PLR", nature: "EXTRAORDINARY", category: "PLR", amount: 1_800_000, day: 15, from: 5, to: 5 },
+  { name: "Freelance de design", type: "FREELANCE", nature: "TEMPORARY", category: "Freelance", amount: 120_000, day: 20, from: 2, to: 9 },
+  { name: "Rendimentos de investimentos", type: "INVESTMENT_INCOME", nature: "RECURRING", category: "Rendimentos", amount: 52_000, day: 28, from: 0, to: 12 },
 ];
 
 interface DemoExpenseSeed {
@@ -79,7 +82,7 @@ const DEMO_EXPENSES: DemoExpenseSeed[] = [
 export interface DemoRows {
   accounts: Record<string, unknown>[];
   balancesFor: (accountIdByKey: Record<string, string>) => Record<string, unknown>[];
-  incomes: Record<string, unknown>[];
+  /** Receitas e despesas são ambas transações — não existe tabela separada de renda. */
   transactionsFor: (categoryIdByName: Record<string, string>) => Record<string, unknown>[];
 }
 
@@ -106,19 +109,26 @@ export function buildDemoData(): DemoRows {
         })),
       ),
 
-    incomes: months.flatMap((month, i) =>
-      DEMO_INCOMES.filter((inc) => i >= inc.from && i <= inc.to).map((inc) => ({
-        month: monthStartISO(month),
-        name: inc.name,
-        type: inc.type,
-        nature: inc.nature,
-        amount_cents: inc.amount,
-        is_demo: true,
-      })),
-    ),
-
-    transactionsFor: (categoryIdByName) =>
-      months.flatMap((month, i) =>
+    transactionsFor: (categoryIdByName) => [
+      ...months.flatMap((month, i) =>
+        DEMO_INCOMES.filter((inc) => i >= inc.from && i <= inc.to).map((inc) => {
+          const day = String(inc.day).padStart(2, "0");
+          const occurred = `${month.slice(0, 8)}${day}`;
+          return {
+            occurred_on: occurred,
+            description: inc.name,
+            amount_cents: inc.amount,
+            type: "INCOME",
+            income_type: inc.type,
+            income_nature: inc.nature,
+            category_id: categoryIdByName[inc.category] ?? null,
+            source: "DEMO",
+            dedupe_hash: dedupeHash(occurred, inc.amount, inc.name),
+            is_demo: true,
+          };
+        }),
+      ),
+      ...months.flatMap((month, i) =>
         DEMO_EXPENSES.filter((e) => i >= (e.from ?? 0) && i <= (e.to ?? DEMO_MONTHS - 1)).map((e) => {
           const day = String(e.day).padStart(2, "0");
           const occurred = `${month.slice(0, 8)}${day}`;
@@ -134,5 +144,6 @@ export function buildDemoData(): DemoRows {
           };
         }),
       ),
+    ],
   };
 }
