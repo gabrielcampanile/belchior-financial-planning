@@ -125,7 +125,7 @@ export function useInvalidateFinance() {
       "accounts",
       "balances",
       "transactions",
-      "income",
+      "planning",
       "closures",
     ]) {
       void qc.invalidateQueries({ queryKey: [key] });
