@@ -57,7 +57,7 @@ import {
   useAccounts,
   useBalances,
   useCategories,
-  useIncomeEntries,
+  
   useTransactions,
 } from "@/hooks/useFinanceData";
 import {
