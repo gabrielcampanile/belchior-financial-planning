@@ -52,6 +52,7 @@ function ImportPage() {
     amountColumn: 2,
     dateFormat: "DD/MM/YYYY",
     hasHeader: true,
+    sourceKind: "STATEMENT",
     negativeIsExpense: true,
     currency: DEFAULT_CURRENCY,
     currencyColumn: null,
@@ -69,9 +70,11 @@ function ImportPage() {
   const prepared = useMemo(() => {
     if (!result) return [];
     return result.parsed.map((row) => {
-      const isExpense = mapping.negativeIsExpense ? row.amount_cents < 0 : row.amount_cents > 0;
+      const flow = classifyRow(row.amount_cents, mapping.sourceKind, mapping.negativeIsExpense);
       const match = applyRules(row.description, rules);
-      const type = match?.type ?? (isExpense ? "EXPENSE" : "INCOME");
+      // Regras podem reclassificar (ex.: aporte de investimento), mas nunca
+      // transformam uma saída de cartão em receita.
+      const type = match?.type ?? flow;
       const hash = dedupeHash(row.occurred_on, Math.abs(row.amount_cents), row.description, row.currency);
       return {
         occurred_on: row.occurred_on,
@@ -80,12 +83,14 @@ function ImportPage() {
         currency: row.currency,
         type,
         category_id: match?.categoryId ?? null,
+        income_type: type === "INCOME" ? ("OTHER" as const) : null,
+        income_nature: type === "INCOME" ? ("RECURRING" as const) : null,
         source: "IMPORT",
         dedupe_hash: hash,
         duplicate: existingHashes.has(hash),
       };
     });
-  }, [result, mapping.negativeIsExpense, rules, existingHashes]);
+  }, [result, mapping.sourceKind, mapping.negativeIsExpense, rules, existingHashes]);
 
   const newRows = prepared.filter((r) => !r.duplicate);
 
