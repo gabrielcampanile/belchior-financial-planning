@@ -145,4 +145,5 @@ export function buildDemoData(): DemoRows {
         }),
       ),
     ],
+  };
 }
