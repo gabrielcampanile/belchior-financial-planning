@@ -8,7 +8,7 @@ import {
   useAccounts,
   useBalances,
   useCategories,
-  useIncomeEntries,
+  
   useProfile,
   useSettings,
   useTransactions,
