@@ -109,19 +109,26 @@ export function buildDemoData(): DemoRows {
         })),
       ),
 
-    incomes: months.flatMap((month, i) =>
-      DEMO_INCOMES.filter((inc) => i >= inc.from && i <= inc.to).map((inc) => ({
-        month: monthStartISO(month),
-        name: inc.name,
-        type: inc.type,
-        nature: inc.nature,
-        amount_cents: inc.amount,
-        is_demo: true,
-      })),
-    ),
-
-    transactionsFor: (categoryIdByName) =>
-      months.flatMap((month, i) =>
+    transactionsFor: (categoryIdByName) => [
+      ...months.flatMap((month, i) =>
+        DEMO_INCOMES.filter((inc) => i >= inc.from && i <= inc.to).map((inc) => {
+          const day = String(inc.day).padStart(2, "0");
+          const occurred = `${month.slice(0, 8)}${day}`;
+          return {
+            occurred_on: occurred,
+            description: inc.name,
+            amount_cents: inc.amount,
+            type: "INCOME",
+            income_type: inc.type,
+            income_nature: inc.nature,
+            category_id: categoryIdByName[inc.category] ?? null,
+            source: "DEMO",
+            dedupe_hash: dedupeHash(occurred, inc.amount, inc.name),
+            is_demo: true,
+          };
+        }),
+      ),
+      ...months.flatMap((month, i) =>
         DEMO_EXPENSES.filter((e) => i >= (e.from ?? 0) && i <= (e.to ?? DEMO_MONTHS - 1)).map((e) => {
           const day = String(e.day).padStart(2, "0");
           const occurred = `${month.slice(0, 8)}${day}`;
@@ -137,5 +144,5 @@ export function buildDemoData(): DemoRows {
           };
         }),
       ),
-  };
+    ],
 }
