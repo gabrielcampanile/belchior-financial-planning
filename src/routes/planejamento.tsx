@@ -144,7 +144,7 @@ function PlanejamentoPage() {
 
   const summary = useMemo(() => summarizeProjection(projection), [projection]);
 
-  const actual = monthMetrics(month, transactions, incomes, categories, convert);
+  const actual = monthMetrics(month, transactions, categories, convert);
   const plannedMonth = projection.find((p) => p.month === month);
 
   const budget = [
