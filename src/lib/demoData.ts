@@ -32,20 +32,23 @@ interface DemoIncomeSeed {
   name: string;
   type: IncomeType;
   nature: IncomeNature;
+  /** Categoria de RECEITA (conjunto separado das categorias de despesa). */
+  category: string;
   amount: number;
+  day: number;
   from: number;
   to: number;
 }
 
 /** índices de mês relativos a DEMO_START (0 = Ago/2026) */
 const DEMO_INCOMES: DemoIncomeSeed[] = [
-  { name: "Salário Gabriel", type: "SALARY", nature: "RECURRING", amount: 1_450_000, from: 0, to: 12 },
-  { name: "Salário Luana", type: "SALARY", nature: "RECURRING", amount: 780_000, from: 0, to: 12 },
-  { name: "VR/VA do casal", type: "VR", nature: "RECURRING", amount: 160_000, from: 0, to: 12 },
-  { name: "Bolsa de pesquisa (temporária)", type: "SCHOLARSHIP", nature: "TEMPORARY", amount: 220_000, from: 0, to: 7 },
-  { name: "PLR anual", type: "PLR", nature: "EXTRAORDINARY", amount: 1_800_000, from: 5, to: 5 },
-  { name: "Freelance de design", type: "FREELANCE", nature: "TEMPORARY", amount: 120_000, from: 2, to: 9 },
-  { name: "Rendimentos de investimentos", type: "INVESTMENT_INCOME", nature: "RECURRING", amount: 52_000, from: 0, to: 12 },
+  { name: "Salário Gabriel", type: "SALARY", nature: "RECURRING", category: "Salário", amount: 1_450_000, day: 5, from: 0, to: 12 },
+  { name: "Salário Luana", type: "SALARY", nature: "RECURRING", category: "Salário", amount: 780_000, day: 5, from: 0, to: 12 },
+  { name: "VR/VA do casal", type: "VR", nature: "RECURRING", category: "VR/VA", amount: 160_000, day: 1, from: 0, to: 12 },
+  { name: "Bolsa de pesquisa (temporária)", type: "SCHOLARSHIP", nature: "TEMPORARY", category: "Bolsa", amount: 220_000, day: 10, from: 0, to: 7 },
+  { name: "PLR anual", type: "PLR", nature: "EXTRAORDINARY", category: "PLR", amount: 1_800_000, day: 15, from: 5, to: 5 },
+  { name: "Freelance de design", type: "FREELANCE", nature: "TEMPORARY", category: "Freelance", amount: 120_000, day: 20, from: 2, to: 9 },
+  { name: "Rendimentos de investimentos", type: "INVESTMENT_INCOME", nature: "RECURRING", category: "Rendimentos", amount: 52_000, day: 28, from: 0, to: 12 },
 ];
 
 interface DemoExpenseSeed {
