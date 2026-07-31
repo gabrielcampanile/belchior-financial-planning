@@ -197,7 +197,7 @@ function SettingsPage() {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const db = supabase as any;
-      for (const table of ["transactions", "income_entries", "account_balances", "accounts", "closures"]) {
+      for (const table of ["transactions", "account_balances", "accounts", "closures"]) {
         const { error } = await db.from(table).delete().eq("is_demo", true);
         if (error) throw new Error(error.message);
       }
