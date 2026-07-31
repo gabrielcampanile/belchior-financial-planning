@@ -14,8 +14,12 @@ import {
   mapRows,
   parseCsv,
   dedupeHash,
+  classifyRow,
+  SOURCE_KIND_LABEL,
+  SOURCE_KINDS,
   type Delimiter,
   type ImportMapping,
+  type SourceKind,
 } from "@/domain/csv";
 import { applyRules } from "@/domain/categorizationEngine";
 import { useCategories, useRules, useTransactions, useUpsert } from "@/hooks/useFinanceData";
