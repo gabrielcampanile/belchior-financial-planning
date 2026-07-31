@@ -118,31 +118,69 @@ export function investmentTotal(
     .reduce((sum, t) => sum + Math.abs(convert(money(t.amount_cents, t.currency), t.occurred_on)), 0);
 }
 
+export interface CategorySlice {
+  categoryId: string | null;
+  name: string;
+  total: number;
+}
+
 export interface IncomeBreakdown {
   recurring: number;
   temporary: number;
   extraordinary: number;
   total: number;
+  byCategory: CategorySlice[];
+  byType: { type: IncomeType; total: number }[];
 }
 
+/**
+ * Receitas do mês, derivadas exclusivamente das transações do tipo INCOME.
+ * Transferências e aportes nunca entram como receita.
+ */
 export function incomeBreakdown(
-  entries: IncomeEntry[],
+  transactions: Transaction[],
+  categories: Category[] = [],
   convert: MoneyConverter = identityConverter,
 ): IncomeBreakdown {
-  const recurring = sumBy(entries, "RECURRING", convert);
-  const temporary = sumBy(entries, "TEMPORARY", convert);
-  const extraordinary = sumBy(entries, "EXTRAORDINARY", convert);
-  return { recurring, temporary, extraordinary, total: recurring + temporary + extraordinary };
-}
+  const nameById = new Map(categories.map((c) => [c.id, c.name] as const));
+  const parentById = new Map(categories.map((c) => [c.id, c.parent_id] as const));
+  const byNature = { RECURRING: 0, TEMPORARY: 0, EXTRAORDINARY: 0 };
+  const catTotals = new Map<string, number>();
+  const typeTotals = new Map<IncomeType, number>();
+  let total = 0;
 
-function sumBy(
-  entries: IncomeEntry[],
-  nature: IncomeEntry["nature"],
-  convert: MoneyConverter,
-): number {
-  return entries
-    .filter((e) => e.nature === nature)
-    .reduce((s, e) => s + convert(money(e.amount_cents, e.currency), e.month), 0);
+  for (const tx of transactions) {
+    if (tx.type !== "INCOME") continue;
+    const value = Math.abs(convert(money(tx.amount_cents, tx.currency), tx.occurred_on));
+    total += value;
+    const nature: IncomeNature = tx.income_nature ?? "RECURRING";
+    byNature[nature] = (byNature[nature] ?? 0) + value;
+    const type: IncomeType = tx.income_type ?? "OTHER";
+    typeTotals.set(type, (typeTotals.get(type) ?? 0) + value);
+    const rootId = tx.category_id ? (parentById.get(tx.category_id) ?? tx.category_id) : "__none__";
+    catTotals.set(rootId, (catTotals.get(rootId) ?? 0) + value);
+  }
+
+  const byCategory = [...catTotals.entries()]
+    .map(([categoryId, value]) => ({
+      categoryId: categoryId === "__none__" ? null : categoryId,
+      name: categoryId === "__none__" ? "Sem categoria" : (nameById.get(categoryId) ?? "Sem categoria"),
+      total: value,
+    }))
+    .sort((a, b) => b.total - a.total);
+
+  const byType = [...typeTotals.entries()]
+    .map(([type, value]) => ({ type, total: value }))
+    .sort((a, b) => b.total - a.total);
+
+  return {
+    recurring: byNature.RECURRING,
+    temporary: byNature.TEMPORARY,
+    extraordinary: byNature.EXTRAORDINARY,
+    total,
+    byCategory,
+    byType,
+  };
 }
 
 /** (receita total − despesa total) / receita total */
