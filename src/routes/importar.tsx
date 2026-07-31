@@ -225,6 +225,29 @@ function ImportPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="grid gap-2">
+                <Label>Origem do arquivo</Label>
+                <Select
+                  value={mapping.sourceKind}
+                  onValueChange={(v) => setMapping({ ...mapping, sourceKind: v as SourceKind })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SOURCE_KINDS.map((kind) => (
+                      <SelectItem key={kind} value={kind}>
+                        {SOURCE_KIND_LABEL[kind]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {mapping.sourceKind === "CARD_INVOICE"
+                    ? "Fatura: tudo vira despesa; valores negativos entram como estorno (receita)."
+                    : "Extrato: o sinal do valor define entrada ou saída."}
+                </p>
+              </div>
               <div className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
                 <span className="text-sm">Primeira linha é cabeçalho</span>
                 <Switch
@@ -232,13 +255,15 @@ function ImportPage() {
                   onCheckedChange={(v) => setMapping({ ...mapping, hasHeader: v })}
                 />
               </div>
-              <div className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
-                <span className="text-sm">Valor negativo é despesa</span>
-                <Switch
-                  checked={mapping.negativeIsExpense}
-                  onCheckedChange={(v) => setMapping({ ...mapping, negativeIsExpense: v })}
-                />
-              </div>
+              {mapping.sourceKind === "STATEMENT" ? (
+                <div className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
+                  <span className="text-sm">Valor negativo é despesa</span>
+                  <Switch
+                    checked={mapping.negativeIsExpense}
+                    onCheckedChange={(v) => setMapping({ ...mapping, negativeIsExpense: v })}
+                  />
+                </div>
+              ) : null}
             </div>
           </Panel>
 
